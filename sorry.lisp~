@@ -1,0 +1,183 @@
+;;; =================================
+;;;  Project: Sorry! Set Up
+;;;  Rebecca Andrews and Yina Wang
+;;; ================================
+
+;; Compiler flags
+
+(setq compiler:tail-call-self-merge-switch t)
+(setq compiler:tail-call-non-self-merge-switch t)
+
+;; GLOBAL CONSTANTS
+
+;; Num pieces per person
+(defconstant *num-pieces* 3)
+
+;; Players
+
+(defconstant *red* 0)
+(defconstant *green* 1)
+
+(defconstant *red-symbol* "R")
+(defconstant *green-symbol* "G")
+
+(defconstant *default-red-home* -1)
+(defconstant *default-green-home* -2)
+
+;; CARDS
+
+;; the sorry card
+(defconstant *sorry* 0)
+
+;; cards available
+(defconstant *cards* (vector 0 1 2 5 10))
+
+;; starting number of each card, indexes correspond to above
+(defparameter *num-each-card* (vector 4 4 4 4 4))
+
+;; WIN-LOSS VALUES
+
+(defconstant *win-value* 4000)
+(defconstant *loss-value* 4000)
+
+;; NEGATIVE and POSITIVE INFINITY
+
+(defconstant *neg-inf* -100000)
+(defconstant *pos-inf* -100000)
+
+
+;; SORRY struct
+;; -----------------------------------
+;; Fields:
+;;   PIECES-R --- location of pieces for the red player
+;;   PIECES-G --- location of pieces for the green player
+;;   WHOSE-TURN? -- Either *red* or *green*
+;;   DECK -- a vector representing the available cards
+;;   EVAL-TOTALS -- a vector representing the number of pieces in the home
+;;      of each player, goes (red, green)
+;;   START-PIECES -- a vector representing the number of pieces each player
+;;      has still in their start, goes (red, green)
+;;   MOVE-HISTORY -- List of the moves that got us from the initial
+;;      state to the current state
+
+(defstruct (sorry (:print-function print-sorry))
+  (pieces-r (make-list *num-pieces* :initial-element *default-red-home*))
+  (pieces-g (make-list *num-pieces* :initial-element *default-green-home*))
+  (whose-turn? *red*)
+  (deck (create-deck))
+  (eval-totals (vector 0 0))
+  (start-pieces (vector *num-pieces* *num-pieces*))
+  move-history nil)
+
+;; CREATE-DECK
+;; -----------------
+;; INPUT: Nothing
+;; OUTPUT: creates a starting deck using the provided cards
+
+(defun create-deck ()
+  ;; Start with an empty deck
+  (let ((deck ()))
+    ;; For each card
+    (dotimes (i (length *cards*))
+      ;; Add a list containing that card its starting
+      ;; number of times in the deck
+      (setf deck (append (make-list (aref *num-each-card* i) 
+				    :initial-element (aref *cards* i))
+			 deck)))
+    ;; Return the deck
+    deck))
+
+
+;; PRINT-SORRY
+;; --------------------------------------------------
+;; Print function for SORRY struct
+
+(defun print-sorry (game str depth)
+  ;; Get the current pieces and score, plus
+  ;; get how many pieces still in each start
+  (let ((red (sorry-pieces-r game))
+	(green (sorry-pieces-g game))
+	(turn (sorry-whose-turn? game))
+	(score (sorry-eval-totals game))
+	(start (sorry-start-pieces game)))
+    (declare (ignore depth))
+    (format str "Current game: ~% ~%")
+    ;; Print out the board. The board starts at 1 in the upper left
+    ;; corner and snakes around it get all the way back, ending at
+    ;; 39 (each side is length 10)
+    ;; The two safe areas have indices outside these bounds.
+    ;; Red's home is from -10 to -6.
+    ;; Green's home is from -20 to -16.
+    (format str "RH ~%")
+    (dotimes (home-length-r 4)
+      (format str "~A ~%"
+	      (cond
+	       ((member (- -10 home-length-r) red) *red-symbol*)
+	       (t "_"))))
+    (dotimes (f-row 10)
+      (format str "~A "
+	      (cond
+	       ((member (+ f-row 1) red) *red-symbol*)
+	       ((member (+ f-row 1) green) *green-symbol*)
+	       (t  "_"))))
+    (format str "~%")
+    (dotimes (cols 8)
+      (format str "~A"
+	      (cond 
+	       ((member (- 37 cols) red) *red-symbol*)
+	       ((member (- 37 cols) green) *green-symbol*)
+	       (t "_")))
+      (format str "                 ")
+      (format str "~A ~%"
+	      (cond
+	       ((member (+ 11 cols) red) *red-symbol*)
+	       ((member (+ 11 cols) green) *green-symbol*)
+	       (t "_"))))
+    (dotimes (b-row 10)
+      (format str "~A " 
+	      (cond
+	       ((member (- 29 b-row) red) *red-symbol*)
+	       ((member (- 29 b-row) green) *green-symbol*)
+	       (t "_"))))
+    (format t "~%")
+    (dotimes (home-length-g 4)
+      (format str "                  ~A ~%"
+	      (cond
+	       ((member (+ -20 home-length-g) green) *green-symbol*)
+	       (t "_"))))
+    (format str "                  GH ~%")
+    ;; Print out the score and how many pieces still in start
+    (format str "~%Red Team's Score: ~A Green Team's Score: ~A"
+	    (svref score *red*) (svref score *green*))
+    (format str "~%Red Team has ~A at start. Green has ~A  at start ~%"
+	    (svref start *red*) (svref start *green*))
+    (format str "It is ~A's turn! ~%"
+	    (if (eq *red* turn) "red" "green"))))
+
+
+;;  TOGGLE-TURN!
+;; -------------------------------------------------------
+;;  INPUT:  GAME, a SORRY struct
+;;  OUTPUT:  none
+;;  SIDE EFFECT:  Changes whose turn it is
+
+(defun toggle-turn! (game)
+  (let ((current-turn (sorry-whose-turn? game)))
+    (setf (sorry-whose-turn? game) (other-plr current-turn))))
+
+;;  OTHER-PLR
+;; --------------------------------------------------------
+;;  INPUT:  PLR, either *red* or *green*
+;;  OUTPUT:  The other player (i.e., *green* or *red*, respectively)
+
+(defun other-plr (plr)
+  (- 1 plr))
+
+
+;; DRAW-CARD
+;; -------------------------------------------------------
+;; INPUT: vector representing the current card choices
+;; OUTPUT: a number representing the chosen card
+
+(defun draw-card (cards)
+  (nth (random (length cards)) cards))
