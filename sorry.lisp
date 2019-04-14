@@ -24,6 +24,9 @@
 (defconstant *default-red-start* -1)
 (defconstant *default-green-start* -2)
 
+(defconstant *default-red-home* -6)
+(defconstant *default-green-home* -16)
+
 ;; CARDS
 
 ;; the sorry card
@@ -69,7 +72,7 @@
   (pieces-g (make-array *num-pieces* :initial-element *default-green-start*))
   (whose-turn? *red*)
   (eval-totals (vector 0 0))
-  (num-cards 10)
+  (num-cards 20)
   (deck (copy-seq *num-each-card*))
   (current-card nil)
   move-history nil)
@@ -259,7 +262,144 @@
 
 (defun do-move! (game check-legal? loc-old loc-new &key (show nil))
   (cond
+   ;; If need to check for legal moves, do so
    ((and check-legal? (not (legal-move? game loc-old loc-new)))
     (format t "Can't do illegal move: ~A => ~A ~%" loc-old loc-new))
    (t
-    'Implement)))
+    (let* ((turn (sorry-whose-turn? game))
+	   (reds (sorry-pieces-r game))
+	   (greens (sorry-pieces-g game))
+	   (curr-player (if (= turn *red*) reds greens))
+	   (index-piece (position loc-old curr-player))
+	   (other-player (if (= turn *red*) greens reds))
+	   (index-other-piece (position loc-new other-player)))
+      ;; When we land on another player
+      (when index-other-piece
+	;; send them back t start
+	(send-to-start game turn loc-new)) 
+      ;; Update our piece's location and toggle the turn
+      (setf (aref curr-player index-piece) loc-new)
+      (toggle-turn! game)
+      ;; Record the current move
+      (push (list loc-old loc-new index-other-piece) (sorry-move-history game))
+      game))))
+	   
+;; SEND-TO-START
+;; ----------------------------------------------------------
+;; INPUTS: GAME, a SORRY struct
+;;         TURN, a value representing whose turn (red or green)
+;;         TAKEN-SPOT, the position of the piece that has been taken
+;; OUTPUT: Doesn't matter
+;; SIDE EFFECT: the piece is sent back to the start
+
+(defun send-to-start (game turn taken-spot)
+  ;; Determine which player has been landed on and get the
+  ;; affected piece
+  (let* ((affected-player (if (= turn *red*) (sorry-pieces-g game)
+			    (sorry-pieces-r game)))
+	 (affected-piece (position taken-spot affected-player))
+	 (start (if (= turn *red*) *default-green-start* *default-red-start*)))
+    ;; Send the effected piece back to the start
+    (setf (aref affected-player affected-piece) start)))
+
+;; LEGAL-MOVE?
+;; -----------------------------------------------------
+;; INPUTS: GAME, a SORRY struct
+;;         LOC-OLD, the old spot for the piece
+;;         LOC-NEW, the new spot for the piece
+;; OUTPUT: T if moving the piece from old to new is legal
+
+(defun legal-move? (game loc-old loc-new)
+  (let* ((turn (sorry-whose-turn? game))
+	 (reds (sorry-pieces-r game))
+	 (greens (sorry-pieces-g game))
+	 (curr-player (if (= turn *red*) reds greens))
+	 (index-piece (position loc-old curr-player))
+	 (affected-player (if (= turn *red*) (sorry-pieces-g game)
+			    (sorry-pieces-r game)))
+	 (affected-piece (position taken-spot affected-player)))
+    (cond
+     ;; Cannot move into the same spot as another one of your own
+     ;; pieces
+     ((or (position loc-new curr-player)
+	  ;; And cannot affect another player if they
+	  ;; are in their own safe zone
+	  (and affected-piece (< loc-new 0)) nil))
+     (t t))))
+
+
+;;  LEGAL-MOVES
+;; ------------------------------------------------------
+;;  INPUT:  G, a SORRY game struct
+;;  OUTPUT:  A list of the legal moves for whoever's turn it is.
+;;  NOTE:  Fetches legal moves for all the LIVE pieces of whoever's 
+;;         turn it is. 
+
+(defun legal-moves (g)
+  (let* ((turn (sorry-whose-turn? g))
+	 (current-pieces (if (= turn *red*) (sorry-pieces-r g)
+			   (sorry-pieces-g g)))
+	 (op-pieces (if (= turn *red*) (sorry-pieces-g g)
+			       (sorry-pieces-r g)))
+	 (home (if (= turn *red*) *default-red-home* *default-green-home*))
+	 (moves nil))
+    (dotimes (i *num-pieces*)
+      (let ((p (aref current-pieces i)))
+	(when (not (= p home))
+	  (dotimes (i (length *cards*))
+	    (push (use-card (aref *cards* i) p turn current-pieces op-pieces) moves)))))
+    moves))
+    
+
+
+;; USE-CARD
+;; -----------------------------------------------
+;; INPUTS: CARD, a value representing a card
+;;         PIECE, the location of the current piece
+;;         TURN, a value representing whose turn it is (red or green)
+;;         CURR-PIECES, the pieces belonging to the current player
+;;         OP-PIECES, the pieces belonging to the other player
+;; OUTPUTS: Move accumulator
+
+(defun use-card (card piece turn curr-pieces op-pieces)
+  (let ((moves nil))
+    (cond
+     ;; When get sorry card
+     ((= card *sorry*)
+      ;; Any move where you send the other player home
+      ;; is available
+      (dotimes (i *num-pieces*)
+	(when (> (aref op-pieces i) 0)
+	  (push (list piece (aref op-pieces i)) moves))))
+     ;; When we are at start with red,
+     ;; can only move to the first square by its start
+     ((= piece *default-red-start*)
+      (push (list piece 11) moves)
+      (return-from use-card moves))
+     ;; The same is true for green
+     ((= piece *default-green-start*)
+      (push (list piece 30) moves)
+      (return-from use-card moves))
+       ;; Just add as long as not in start
+      (t
+       (let ((new-val (+ piece card)))
+	 (cond
+	  ((> new-val 37) (setf new-val (- new-val 37)))
+	  ((and (= turn *red*) (< piece 11) (> new-val 11))
+	   (setf new-val (+ -10 (- new-val 10))))
+	  ((and (= turn *green*) (< piece 30) (> new-val 30))
+	   (setf new-val (+ (-20 (- new-val 29))))))
+	 (when (not (position new-val curr-pieces))
+	   (push (list piece new-val) moves)))))
+    moves))
+
+
+;; GAME-OVER
+;; ------------------------------------------
+;; INPUTS: G, a SORRY struct
+;; OUTPUT: T if either player has finished
+
+(defun game-over (g)
+  (let ((score (sorry-eval-totals g)))
+    (or (= (aref score 1) *num-pieces*) 
+	(= (aref score 2) *num-pieces*))))
