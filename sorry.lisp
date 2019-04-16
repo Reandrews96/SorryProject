@@ -123,7 +123,7 @@
 				    (+ -10 home-length-r) red))))
 	       (t "__"))))
     (format str "RH~%")
-    (dotimes (cols 8)
+    (dotimes (cols 9)
       ;; Printing each of the sides of the board
       (format str "               ~A"
 	      (cond 
@@ -210,7 +210,7 @@
 ;; DRAW-CARD
 ;; -------------------------------------------------------
 ;; INPUT: G a SORRY struct
-;; OUTPUT: a number representing the chosen card
+;; OUTPUT: the modified game struct now with the card
 
 (defun draw-card (g)
   ;; Don't let the user draw another card
@@ -248,7 +248,8 @@
     ;; No matter what, set our current card to be the card
     ;; located at the selected index
     (setf (sorry-current-card g) 
-      (aref *cards* selected-index))))
+      (aref *cards* selected-index))
+    g))
 
 
 ;; DO-MOVE!
@@ -279,7 +280,16 @@
 	(send-to-start game turn loc-new)) 
       ;; Update our piece's location and toggle the turn
       (setf (aref curr-player index-piece) loc-new)
+      (cond
+       ;; When we just moved our red piece into the red home
+       ;; update eval
+       ((= loc-new *default-red-home*) (incf (aref (sorry-eval-totals game) 0)))
+       ;; When we just moved our green piece into the green home
+       ;; update the eval
+       ((= loc-new *default-green-home*) (incf (aref (sorry-eval-totals game) 1))))
       (toggle-turn! game)
+      ;; Reset the card to being null
+      (setf (sorry-current-card game) nil)
       ;; Record the current move
       (push (list loc-old loc-new index-other-piece) (sorry-move-history game))
       game))))
@@ -317,7 +327,7 @@
 	 (index-piece (position loc-old curr-player))
 	 (affected-player (if (= turn *red*) (sorry-pieces-g game)
 			    (sorry-pieces-r game)))
-	 (affected-piece (position taken-spot affected-player)))
+	 (affected-piece (position loc-new affected-player)))
     (cond
      ;; Cannot move into the same spot as another one of your own
      ;; pieces
@@ -336,18 +346,30 @@
 ;;         turn it is. 
 
 (defun legal-moves (g)
+  ;; Get information about the current state of the game
   (let* ((turn (sorry-whose-turn? g))
 	 (current-pieces (if (= turn *red*) (sorry-pieces-r g)
 			   (sorry-pieces-g g)))
 	 (op-pieces (if (= turn *red*) (sorry-pieces-g g)
 			       (sorry-pieces-r g)))
 	 (home (if (= turn *red*) *default-red-home* *default-green-home*))
-	 (moves nil))
+	 (deck (sorry-deck g))
+	 ;; Initialize moves to be empty
+	 (moves ())
+	 (current-move nil))
+    ;; For all the pieces
     (dotimes (i *num-pieces*)
       (let ((p (aref current-pieces i)))
+	;; When we have not already gotten the piece home
 	(when (not (= p home))
-	  (dotimes (i (length *cards*))
-	    (push (use-card (aref *cards* i) p turn current-pieces op-pieces) moves)))))
+	  ;; Try each card on the piece
+	  (dotimes (j (length *cards*))
+	    ;; As long as there are cards left
+	    (when (> (aref deck j) 0)
+	      ;; If get the potential places the current move to take this piece
+	      (setf current-move (use-card (aref *cards* j) p turn current-pieces op-pieces))
+	      ;; When this isn't empty, add to list of moves
+	      (when current-move (setf moves (append current-move moves))))))))
     moves))
     
 
@@ -370,28 +392,109 @@
       ;; is available
       (dotimes (i *num-pieces*)
 	(when (> (aref op-pieces i) 0)
-	  (push (list piece (aref op-pieces i)) moves))))
+	  (push (list piece (aref op-pieces i) card) moves))))
      ;; When we are at start with red,
      ;; can only move to the first square by its start
      ((= piece *default-red-start*)
-      (push (list piece 11) moves)
+      (push (list piece 11 1) moves)
       (return-from use-card moves))
      ;; The same is true for green
      ((= piece *default-green-start*)
-      (push (list piece 30) moves)
+      (push (list piece 30 1) moves)
       (return-from use-card moves))
        ;; Just add as long as not in start
-      (t
-       (let ((new-val (+ piece card)))
-	 (cond
-	  ((> new-val 37) (setf new-val (- new-val 37)))
-	  ((and (= turn *red*) (< piece 11) (> new-val 11))
-	   (setf new-val (+ -10 (- new-val 10))))
-	  ((and (= turn *green*) (< piece 30) (> new-val 30))
-	   (setf new-val (+ (-20 (- new-val 29))))))
-	 (when (not (position new-val curr-pieces))
-	   (push (list piece new-val) moves)))))
+     (t
+      ;; When the card is a ten
+      (when (= card 10)
+	;; Can also move back 1
+	(push (list piece (move-piece-on-board piece -1 turn) 10) moves))
+      ;; Otherwise get new position
+      (let ((new-val (move-piece-on-board piece card turn)))
+	;; As long as this doesn't overlap with one of your current pieces
+	(when (not (position new-val curr-pieces))
+	  ;; Add this move
+	  (push (list piece new-val card) moves)))))
     moves))
+
+
+;; MOVE-PIECE-ON-BOARD
+;; INPUTS: LOC-CURR, number representing the current location of piece
+;;         STEPS, number representing the steps forward (or backward) the
+;;          piece must make
+;; OUTPUTS: the new location on the board (deals with rotating back to 1 or
+;;           going into safe-zones)
+
+(defun move-piece-on-board (loc-curr steps turn)
+  (let ((new-val (+ loc-curr steps)))
+    (cond
+     ;; When we reach the top right corner, rotate back to 1
+     ((> new-val 37) (- new-val 37))
+     ;; When we have just gone around board and can enter
+     ;; red's safe zone, enter
+     ((and (= turn *red*) (< loc-curr 11) (> new-val 11))
+      (setf new-val (+ -10 (- new-val 11)))
+      ;; When we pass home, just set the value to home
+      (if (<= *default-red-home* new-val) *default-red-home*
+	;; Otherwise, the new value is fine
+	new-val))
+     ;; When we have just gone round board and can enter
+     ;; green's safe zone, enter
+     ((and (= turn *green*) (< loc-curr 30) (> new-val 30))
+      (setf new-val (+ -20 (- new-val 30)))
+      ;; When we pass home, just set the value to home
+      (if (<= *default-green-home* new-val) *default-green-home*
+	;; Otherwise, the new value is fine
+	new-val))
+     ;; When we moved backwards in the top left corner
+     ;; Write around on indices
+     ((and (< steps 0) (> loc-curr 0) (<= new-val 0))
+      (+ 37 (+ loc-curr steps)))
+     ;; When we move backwards out of safe zone for red
+     ;; move out
+     ((and (< steps 0) (< loc-curr 0) (= turn *red*) (< new-val -10))
+      (+ 11 (- new-val -10)))
+     ;; When we move backwards out of safe zone for green
+     ;; move out
+     ((and (< steps 0) (< loc-curr 0) (= turn *green*) (< new-val -20))
+      (+ 30 (- new-val -20)))
+     (t new-val))))
+
+
+;; UNDO-MOVE!
+;; --------------------------------------------------------
+;; INPUT: G, a SORRY struct
+;; OUTPUT: The modified chess struct
+;; SIDE-EFFECT: Destructively undoes the most recent move on the move history
+
+(defun undo-move! (g)
+  (cond
+   ;; When there are no moves, no need to undo
+   ((null (sorry-move-history g))
+    (format t "No move to undo! Empty move history! ~%")
+    g)
+   (t
+    ;; Get the past move and the past pieces
+    (let* ((move (pop (sorry-move-history g)))
+	   (turn (sorry-whose-turn? g))
+	   ;; When the current turn is red, we know the last turn was
+	   ;; green
+	   (past-current-pieces (if (= turn *red*) (sorry-pieces-g g)
+				  (sorry-pieces-r g)))
+	   ;; When the current turn is red, we know that the oponent
+	   ;; was red last time
+	   (past-op-pieces (if (= turn *red*) (sorry-pieces-r g)
+			       (sorry-pieces-g g)))
+	   (orig-spot (first move))
+	   (later-spot (second move))
+	   (index-old-piece (third move)))
+      ;; If we need to put a piece back in this spot, do so
+      (when index-old-piece (setf (aref past-op-pieces index-old-piece) later-spot))
+      ;; Otherwise, reset the piece to its old spot
+      (setf (aref past-current-pieces (position later-spot past-current-pieces)) orig-spot)
+      ;; Toggle the turn
+      (toggle-turn! g)
+      ;; Return g after its been reset
+      g))))
 
 
 ;; GAME-OVER
@@ -403,3 +506,18 @@
   (let ((score (sorry-eval-totals g)))
     (or (= (aref score 1) *num-pieces*) 
 	(= (aref score 2) *num-pieces*))))
+
+
+;; PLAY-CARD
+;; -----------------------------------------
+;; INPUTS: G, a SORRY struct
+;;         INDEX, the index of the piece you would like to move
+;; OUTPUTS: the modified game after applying card to this piece
+
+(defun play-card (g index)
+  (let* ((card (sorry-current-card g))
+	 (turn (sorry-whose-turn? g))
+	 (current-pieces (if (= turn *red*) (sorry-pieces-r g)
+			   (sorry-pieces-g g)))
+	 (piece-loc (aref current-pieces index)))
+    (do-move! g t piece-loc (move-piece-on-board piece-loc card turn))))
