@@ -331,10 +331,7 @@
     (cond
      ;; Cannot move into the same spot as another one of your own
      ;; pieces
-     ((or (position loc-new curr-player)
-	  ;; And cannot affect another player if they
-	  ;; are in their own safe zone
-	  (and affected-piece (< loc-new 0)) nil))
+     ((position loc-new curr-player) nil)
      (t t))))
 
 
@@ -361,15 +358,35 @@
     (dotimes (i *num-pieces*)
       (let ((p (aref current-pieces i)))
 	;; When we have not already gotten the piece home
-	(when (not (= p home))
-	  ;; Try each card on the piece
+	(cond
+	 ;; When we are at start with red,
+	 ;; can only move to the first square by its start or use
+	 ;; sorry card
+	 ((= p *default-red-start*)
+	  ;; When there aren't any pieces on the first sqaure
+	  (when (not (position 11 current-pieces))
+	    ;; Push this move on
+	    (push (list p 11 1) moves))
+	  (dotimes (i *num-pieces*)
+	    (when (> (aref op-pieces i) 0)
+	      (push (list p (aref op-pieces i) *sorry*) moves))))
+	 ;; The same is true for green
+	 ((= p *default-green-start*)
+	  ;; When there isn't something already right
+	  ;; by the start, add this move
+	  (when (not (position 30 current-pieces))
+	    (push (list p 30 1) moves)))
+	 ;; Otherwise, try each card as long as not already
+	 ;; in home base
+	 ((not (= p home))
+	  ;; Try each card on the piece 
 	  (dotimes (j (length *cards*))
 	    ;; As long as there are cards left
 	    (when (> (aref deck j) 0)
 	      ;; If get the potential places the current move to take this piece
 	      (setf current-move (use-card (aref *cards* j) p turn current-pieces op-pieces))
 	      ;; When this isn't empty, add to list of moves
-	      (when current-move (setf moves (append current-move moves))))))))
+	      (when current-move (setf moves (append current-move moves)))))))))
     moves))
     
 
@@ -386,35 +403,36 @@
 (defun use-card (card piece turn curr-pieces op-pieces)
   (let ((moves nil))
     (cond
-     ;; When get sorry card
-     ((= card *sorry*)
-      ;; Any move where you send the other player home
-      ;; is available
-      (dotimes (i *num-pieces*)
-	(when (> (aref op-pieces i) 0)
-	  (push (list piece (aref op-pieces i) card) moves))))
-     ;; When we are at start with red,
-     ;; can only move to the first square by its start
-     ((= piece *default-red-start*)
-      (push (list piece 11 1) moves)
-      (return-from use-card moves))
-     ;; The same is true for green
-     ((= piece *default-green-start*)
-      (push (list piece 30 1) moves)
-      (return-from use-card moves))
-       ;; Just add as long as not in start
+     ;; When the card is a 10
+     ((= card 10)
+      ;; See if you can either move back 1, and if so, update moves
+      (setf moves (check-move-open 1 piece turn curr-pieces moves card))
+      ;; Or if you can move forward 10, do so
+      (setf moves (check-move-open card piece turn curr-pieces moves card)))
+     ;; Otherwise
      (t
-      ;; When the card is a ten
-      (when (= card 10)
-	;; Can also move back 1
-	(push (list piece (move-piece-on-board piece -1 turn) 10) moves))
-      ;; Otherwise get new position
-      (let ((new-val (move-piece-on-board piece card turn)))
-	;; As long as this doesn't overlap with one of your current pieces
-	(when (not (position new-val curr-pieces))
-	  ;; Add this move
-	  (push (list piece new-val card) moves)))))
+      ;; Just  get new position and add this new move if available
+      (setf moves (check-move-open card piece turn curr-pieces moves card))))
     moves))
+
+
+;; CHECK-MOVE-OPEN
+;; INPUTS: STEPS, the number of steps forward
+;;         PIECE, current location of the piece
+;;         TURN, a val representing the current turn (red or green)
+;;         CURR-PIECES, an array of the current pieces
+;;         MOVES, a list of the current moves
+;;         CARD, the card that caused this move
+;; OUTPUT: add the move to the list of moves if it is available
+
+(defun check-move-open (steps piece turn curr-pieces moves card)
+  ;; Get the new location of the piece
+  (let ((new-val (move-piece-on-board piece steps turn)))
+    ;; When there isn't already a piece there
+    (when (not (position new-val curr-pieces))
+      ;; Add this move to the list
+      (push (list piece new-val card) moves)))
+  moves)
 
 
 ;; MOVE-PIECE-ON-BOARD
@@ -515,9 +533,19 @@
 ;; OUTPUTS: the modified game after applying card to this piece
 
 (defun play-card (g index)
+  ;; Get details of the current state of the game
   (let* ((card (sorry-current-card g))
 	 (turn (sorry-whose-turn? g))
 	 (current-pieces (if (= turn *red*) (sorry-pieces-r g)
 			   (sorry-pieces-g g)))
 	 (piece-loc (aref current-pieces index)))
-    (do-move! g t piece-loc (move-piece-on-board piece-loc card turn))))
+    (cond 
+     ;; When there is a card
+     (card 
+       ;; Play it
+       (do-move! g t piece-loc (move-piece-on-board piece-loc card turn)))
+      (t
+       ;; Otherwise say that there is no available card.
+       (format t "Can't play card because no card has been drawn! ~%")
+       ;; return the game as is
+       g))))
