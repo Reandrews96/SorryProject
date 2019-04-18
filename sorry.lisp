@@ -33,7 +33,7 @@
 (defconstant *sorry* 0)
 
 ;; cards available
-(defconstant *cards* (vector *sorry* 1 2 5 10))
+(defconstant *cards* (vector *sorry* 1 5 8 10))
 
 ;; starting number of each card, indexes correspond to above
 (defconstant *num-each-card* (vector 4 4 4 4 4))
@@ -123,18 +123,18 @@
 				    (+ -10 home-length-r) red))))
 	       (t "__"))))
     (format str "RH~%")
-    (dotimes (cols 9)
+    (dotimes (cols 8)
       ;; Printing each of the sides of the board
       (format str "               ~A"
 	      (cond 
-	       ((find (- 37 cols) red) (concatenate 'string 
+	       ((find (- 36 cols) red) (concatenate 'string 
 					 *red-symbol*
 					 (write-to-string (position
-							   (- 37 cols) red))))
-	       ((find (- 37 cols) green) (concatenate 'string 
+							   (- 36 cols) red))))
+	       ((find (- 36 cols) green) (concatenate 'string 
 					 *green-symbol*
 					 (write-to-string (position
-							   (- 37 cols) green))))
+							   (- 36 cols) green))))
 	       (t "__")))
       (format str "                         ")
       (format str "~A ~%"
@@ -162,14 +162,14 @@
     (dotimes (b-row 10)
       (format str "~A " 
 	      (cond
-	       ((find (- 29 b-row) red) (concatenate 'string 
+	       ((find (- 28 b-row) red) (concatenate 'string 
 					 *red-symbol*
 					 (write-to-string (position
-							   (- 29 b-row) red))))
-	       ((find (- 29 b-row) green) (concatenate 'string 
+							   (- 28 b-row) red))))
+	       ((find (- 28 b-row) green) (concatenate 'string 
 					 *green-symbol*
 					 (write-to-string (position
-							   (- 29 b-row) green))))
+							   (- 28 b-row) green))))
 	       (t "__"))))
     (format str "~%")
     
@@ -265,7 +265,7 @@
   (cond
    ;; If need to check for legal moves, do so
    ((and check-legal? (not (legal-move? game loc-old loc-new)))
-    (format t "Can't do illegal move: ~A => ~A ~%" loc-old loc-new))
+    (format t "Can't do illegal move. ~%" ))
    (t
     (let* ((turn (sorry-whose-turn? game))
 	   (reds (sorry-pieces-r game))
@@ -329,9 +329,13 @@
 			    (sorry-pieces-r game)))
 	 (affected-piece (position loc-new affected-player)))
     (cond
+     ;; If we tried to move a piece with a card that cannot be used
+     ;; not legal move
+     ((null loc-new) nil)
      ;; Cannot move into the same spot as another one of your own
-     ;; pieces
-     ((position loc-new curr-player) nil)
+     ;; pieces or affect a player that is either at the start
+     ;; or their safe zone
+     ((or (position loc-new curr-player)(and affected-piece (< loc-new 0))) nil)
      (t t))))
 
 
@@ -367,6 +371,8 @@
 	  (when (not (position 11 current-pieces))
 	    ;; Push this move on
 	    (push (list p 11 1) moves))
+	  ;; Can also use sorry to move any of oponents
+	  ;; pieces back to their start
 	  (dotimes (i *num-pieces*)
 	    (when (> (aref op-pieces i) 0)
 	      (push (list p (aref op-pieces i) *sorry*) moves))))
@@ -375,7 +381,12 @@
 	  ;; When there isn't something already right
 	  ;; by the start, add this move
 	  (when (not (position 30 current-pieces))
-	    (push (list p 30 1) moves)))
+	    (push (list p 30 1) moves))
+	  ;; Can also use sorry to move any of oponents
+	  ;; pieces back to their start
+	  (dotimes (i *num-pieces*)
+	    (when (> (aref op-pieces i) 0)
+	      (push (list p (aref op-pieces i) *sorry*) moves))))
 	 ;; Otherwise, try each card as long as not already
 	 ;; in home base
 	 ((not (= p home))
@@ -445,6 +456,13 @@
 (defun move-piece-on-board (loc-curr steps turn)
   (let ((new-val (+ loc-curr steps)))
     (cond
+     ;; If the current location is the start
+     ;; and we try to move more than just one
+     ((and (or (= loc-curr *default-red-start*) 
+	       (= loc-curr *default-green-start*))
+	   (not (= steps 1)))
+      ;; Return nil, can't move
+      nil)
      ;; When we reach the top right corner, rotate back to 1
      ((> new-val 37) (- new-val 37))
      ;; When we have just gone around board and can enter
@@ -530,22 +548,31 @@
 ;; -----------------------------------------
 ;; INPUTS: G, a SORRY struct
 ;;         INDEX, the index of the piece you would like to move
+;;         INDEX-OR-CARD, an additional value used to specify
+;;           either the index of the other team's piece you wish
+;;           to affect or the secondary use of the card
 ;; OUTPUTS: the modified game after applying card to this piece
 
-(defun play-card (g index)
+(defun play-card (g index &optional index-or-card)
   ;; Get details of the current state of the game
   (let* ((card (sorry-current-card g))
 	 (turn (sorry-whose-turn? g))
 	 (current-pieces (if (= turn *red*) (sorry-pieces-r g)
 			   (sorry-pieces-g g)))
+	 (op-pieces (if (= turn *red*) (sorry-pieces-g g)
+		      (sorry-pieces-r g)))
 	 (piece-loc (aref current-pieces index)))
     (cond 
-     ;; When there is a card
-     (card 
-       ;; Play it
-       (do-move! g t piece-loc (move-piece-on-board piece-loc card turn)))
+     ;; When the card is a sorry, put piece on the spot
+     ;; of the piece of the other team if possible
+     ((and (= card *sorry*) index-or-card)
+      (do-move! g t piece-loc (aref op-pieces index-or-card)))
+     ((and card (null index-or-card))
+      ;; Play it
+      (do-move! g t piece-loc (move-piece-on-board piece-loc card turn)))
       (t
        ;; Otherwise say that there is no available card.
-       (format t "Can't play card because no card has been drawn! ~%")
+       (format t 
+	       "Can't play card because no card has been drawn or not enough info was given! ~%")
        ;; return the game as is
        g))))
