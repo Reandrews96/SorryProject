@@ -366,6 +366,7 @@
 			       (sorry-pieces-r g)))
 	 (home (if (= turn *red*) *default-red-home* *default-green-home*))
 	 (deck (sorry-deck g))
+	 (seen-start nil)
 	 ;; Initialize moves to be empty
 	 (moves ())
 	 (current-move nil))
@@ -377,7 +378,7 @@
 	 ;; When we are at start with red,
 	 ;; can only move to the first square by its start or use
 	 ;; sorry card
-	 ((= p *default-red-start*)
+	 ((and (= p *default-red-start*) (null seen-start))
 	  ;; When there aren't any pieces on the first sqaure
 	  (when (not (position *first-board-red* current-pieces))
 	    ;; Push this move on
@@ -386,9 +387,10 @@
 	  ;; pieces back to their start
 	  (dotimes (i *num-pieces*)
 	    (when (> (aref op-pieces i) 0)
-	      (push (list p (aref op-pieces i) *sorry*) moves))))
+	      (push (list p (aref op-pieces i) *sorry*) moves)))
+	  (setf seen-start t))
 	 ;; The same is true for green
-	 ((= p *default-green-start*)
+	 ((and (= p *default-green-start*) (null seen-start))
 	  ;; When there isn't something already right
 	  ;; by the start, add this move
 	  (when (not (position 30 current-pieces))
@@ -397,10 +399,13 @@
 	  ;; pieces back to their start
 	  (dotimes (i *num-pieces*)
 	    (when (> (aref op-pieces i) 0)
-	      (push (list p (aref op-pieces i) *sorry*) moves))))
+	      (push (list p (aref op-pieces i) *sorry*) moves)))
+	  (setf seen-start t))
 	 ;; Otherwise, try each card as long as not already
-	 ;; in home base
-	 ((not (= p home))
+	 ;; in home base or a start piece when we have already stored
+	 ;; the moves from start
+	 ((and (not (= p home)) (= p *default-red-start*) 
+		    (= p *default-green-start*))
 	  ;; Try each card on the piece 
 	  (dotimes (j (length *cards*))
 	    ;; As long as there are cards left
