@@ -35,13 +35,13 @@
     (cond
      ;; Case 1:  Game over...
      ((game-over g)
-      (format t "Game is over: ~A!  Sorry dude!~%" game-over-results)
+      (format t "Game is over!  Sorry dude!~%")
       nil)
      ;; Case 2:  Game still on, compute best move...
      (t
       ;; Call COMPUTE-MAX with init alpha/beta values
       (let* ((statty (make-stats))
-	     (best-move nil));;(compute-max g 0 *neg-inf* *pos-inf* statty cutoff-depth)))
+	     (best-move (compute-max g 0 *neg-inf* *pos-inf* statty cutoff-depth)))
 	;; Report number of moves considered...
 	(format t "NUM-MOVES-DONE: ~A, PRUNED-MOVES: ~A~%" 
 		(stats-num-moves-done statty) 
@@ -61,7 +61,7 @@
 ;;           Otherwise returns value of this node according to MINIMAX 
 ;;  SIDE EFFECT:  Modifies contents of STATTY
 
-(defun compute-max (g curr-depth cutoff-depth statty)
+(defun compute-max (g curr-depth alpha beta statty cutoff-depth)
   ;;(format t "COMPUTE-MAX:  cd=~A~%" curr-depth)
   (let ((best-move-so-far nil))
     (cond
@@ -79,16 +79,15 @@
 	(incf (stats-num-potential-moves statty) (length moves))
 	;;(format t "Compute MAX:  legal-moves: ~A~%" moves)
 	(dolist (mv moves)
-	  (incf (stats-num-moves statty))
-	  (decf num-moves-left)
+	  (incf (stats-num-moves-done statty))
 	  (apply #'do-move! g nil mv)
 	  (let* ((index (position mv moves))
 		 (prob (/ (svref (sorry-deck g) index) (sorry-num-cards g)))
-		 (child-val (* prob (compute-min g (1+ curr-depth) cutoff-depth statty))))
+		 (child-val (* prob (compute-min g (1+ curr-depth) alpha beta statty cutoff-depth))))
 	    (undo-move! g)
 	    ;; Check for updating CURR-MAX...
-	    (when (> child-val curr-max)
-	      (setf curr-max child-val)
+	    (when (> child-val alpha)
+	      (setf alpha child-val)
 	      (setf best-move-so-far mv)
 	      (when (<= beta alpha)
 		(return-from compute-max
@@ -102,10 +101,10 @@
 	;; we're at depth 0 or not
 	(cond
 	 ((zerop curr-depth)
-	  (format t "ROOT NODE VALUE: ~A~%" curr-max)
+	  (format t "ROOT NODE VALUE: ~A~%" alpha)
 	  best-move-so-far)
 	 (t
-	  curr-max)))))))
+	  alpha)))))))
 
 ;;  COMPUTE-MIN
 ;; -------------------------------------------------------
@@ -116,7 +115,7 @@
 ;;  OUTPUT:  The value of this MIN node according to rules
 ;;           of MINIMAX with ALPHA-BETA pruning
 
-(defun compute-min (g curr-depth cutoff-depth statty)
+(defun compute-min (g curr-depth alpha beta statty cutoff-depth)
   ;;(format t "COMPUTE-MIN:  cd=~A, alpha=~A, beta=~A~%" curr-depth alpha beta) 
     (cond
      ;; Base Case 0: Game over... and score computed
@@ -134,12 +133,11 @@
 	(incf (stats-num-potential-moves statty) (length moves))
 	;;(format t "Compute MIN:  legal-moves: ~A~%" moves)
 	(dolist (mv moves)
-	  (incf (stats-num-moves statty))
-	  (decf num-moves-left)
+	  (incf (stats-num-moves-done statty))
 	  (apply #'do-move! g nil mv)
 	  (let* ((index (position mv moves))
 		 (prob (/ (svref (sorry-deck g) index) (sorry-num-cards g)))
-		 (child-val (* prob (compute-max g (1+ curr-depth) cutoff-depth statty))))
+		 (child-val (* prob (compute-max g (1+ curr-depth) alpha beta cutoff-depth statty))))
 	    (undo-move! g)
 	    (when (< child-val beta)
 	      (setf beta child-val)
@@ -148,3 +146,6 @@
 	;; return beta
 	;;  NOTE:  Depth can't be zero for a MIN node
 	beta))))
+
+(defun eval-func (g)
+  2)
