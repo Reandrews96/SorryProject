@@ -249,6 +249,10 @@
     ;; located at the selected index
     (setf (sorry-current-card g) 
       (aref *cards* selected-index))
+    ;; When there are no legal moves for this card on this game
+    (when (null (legal-card-moves g))
+      (format t "You can't use this card ~A for your pieces. Passing! ~%" (sorry-current-card g))
+      (pass g))
     g))
 
 
@@ -258,13 +262,14 @@
 ;;         CHECK-LEGAL?, a boolean flag
 ;;         LOC-OLD, position of piece to move
 ;;         LOC-NEW, new position of piece
+;;         CARD, the card that produced the move
 ;; OUTPUT: Resulting SORRY struct if movel legal
 ;;         NIL otherwise
 
-(defun do-move! (game check-legal? loc-old loc-new &key (show nil))
+(defun do-move! (game check-legal? loc-old loc-new card &key (show nil))
   (cond
    ;; If need to check for legal moves, do so
-   ((and check-legal? (not (legal-move? game loc-old loc-new)))
+   ((and check-legal? (not (legal-move? game loc-old loc-new card)))
     (format t "Can't do illegal move. ~%" ))
    (t
     (let* ((turn (sorry-whose-turn? game))
@@ -317,9 +322,10 @@
 ;; INPUTS: GAME, a SORRY struct
 ;;         LOC-OLD, the old spot for the piece
 ;;         LOC-NEW, the new spot for the piece
+;;         CARD, the card that produced the move
 ;; OUTPUT: T if moving the piece from old to new is legal
 
-(defun legal-move? (game loc-old loc-new)
+(defun legal-move? (game loc-old loc-new card)
   (let* ((turn (sorry-whose-turn? game))
 	 (reds (sorry-pieces-r game))
 	 (greens (sorry-pieces-g game))
@@ -332,6 +338,9 @@
      ;; If we tried to move a piece with a card that cannot be used
      ;; not legal move
      ((null loc-new) nil)
+     ;; If you try to use the sorry card to move a piece
+     ;; not in the start or in a safe zone
+     ((and (= card *sorry*) (> loc-old 0)) nil)
      ;; Cannot move into the same spot as another one of your own
      ;; pieces or affect a player that is either at the start
      ;; or their safe zone
@@ -417,7 +426,7 @@
      ;; When the card is a 10
      ((= card 10)
       ;; See if you can either move back 1, and if so, update moves
-      (setf moves (check-move-open 1 piece turn curr-pieces moves card))
+      (setf moves (check-move-open -1 piece turn curr-pieces moves card))
       ;; Or if you can move forward 10, do so
       (setf moves (check-move-open card piece turn curr-pieces moves card)))
      ;; Otherwise
@@ -463,6 +472,14 @@
 	   (not (= steps 1)))
       ;; Return nil, can't move
       nil)
+     ;; If we are moving 1 and on the red start
+     ((= loc-curr *default-red-start*)
+      ;; Move to start spot
+      11)
+     ;; If we are moving 1 and on green start
+     ((= loc-curr *default-green-start*)
+      ;; Move to green start
+      29)
      ;; When we reach the top right corner, rotate back to 1
      ((> new-val 37) (- new-val 37))
      ;; When we have just gone around board and can enter
@@ -525,6 +542,17 @@
 	   (index-old-piece (third move)))
       ;; If we need to put a piece back in this spot, do so
       (when index-old-piece (setf (aref past-op-pieces index-old-piece) later-spot))
+      ;; When the previous move moved us into the goal:
+      (format t "started here ~A and moved ~A here ~%" orig-spot later-spot)
+      (cond
+       ;; When we were red,
+       ((= later-spot *default-red-home*)
+	;; decrement the score for red
+	(decf (aref (sorry-eval-totals g) 0)))
+       ;; When we were green
+       ((= later-spot *default-green-home*)
+	;; decrement the score for green
+	(decf (aref (sorry-eval-totals g) 1))))
       ;; Otherwise, reset the piece to its old spot
       (setf (aref past-current-pieces (position later-spot past-current-pieces)) orig-spot)
       ;; Toggle the turn
@@ -566,13 +594,74 @@
      ;; When the card is a sorry, put piece on the spot
      ;; of the piece of the other team if possible
      ((and (= card *sorry*) index-or-card)
-      (do-move! g t piece-loc (aref op-pieces index-or-card)))
+      (do-move! g t piece-loc (aref op-pieces index-or-card) card))
      ((and card (null index-or-card))
       ;; Play it
-      (do-move! g t piece-loc (move-piece-on-board piece-loc card turn)))
+      (do-move! g t piece-loc (move-piece-on-board piece-loc card turn) card))
       (t
        ;; Otherwise say that there is no available card.
        (format t 
-	       "Can't play card because no card has been drawn or not enough info was given! ~%")
+	       "Can't play card because no card has been drawn or wrong info given! ~%")
        ;; return the game as is
        g))))
+
+;; PASS
+;; INPUT: g, a SORRY struct
+;; OUTPUT: a modified g structure that has flipped the turn to the other player
+
+(defun pass (g)
+  ;; Set the card to be blank
+  (setf (sorry-current-card g) nil)
+  ;; Toggle the turn
+  (toggle-turn! g)
+  g)
+
+
+;; LEGAL-CARD-MOVES
+;; INPUT: g, a SORRY struct
+;; OUTPUT: a list of legal moves that can be performed using this card
+
+(defun legal-card-moves (g)
+  (let* ((turn (sorry-whose-turn? g))
+	 (current-pieces (if (= turn *red*) (sorry-pieces-r g)
+			   (sorry-pieces-g g)))
+	 (op-pieces (if (= turn *red*) (sorry-pieces-g g)
+			       (sorry-pieces-r g)))
+	 (home (if (= turn *red*) *default-red-home* *default-green-home*))
+	 (card (sorry-current-card g))
+	 (deck (sorry-deck g))
+	 ;; Initialize moves to be empty
+	 (moves ())
+	 (current-move nil))
+    ;; For all the pieces
+    (dotimes (i *num-pieces*)
+      (let ((p (aref current-pieces i)))
+	;; When we have piece is at start and card is sorry
+	(cond
+	 ((and (or (= p *default-red-start*) (= p *default-green-start*))(= card *sorry*))
+	  ;; Can also use sorry to move any of oponents
+	  ;; pieces back to their start
+	  (dotimes (i *num-pieces*)
+	    (when (> (aref op-pieces i) 0)
+	      (push (list p (aref op-pieces i) *sorry*) moves))))
+	 ;; When we are at start with red with a 1
+	 ((and (= p *default-red-start*)(= card 1)
+	       ;; And When there aren't any pieces on the first sqaure
+	       (not (position 11 current-pieces)))
+	    ;; Push this move on
+	      (push (list p 11 1) moves))
+	 ;; The same is true for green, when we have a 1
+	 ;; and are on the start
+	 ((and (= p *default-green-start*) (= card 1)
+	  ;; And When there isn't something already right
+	       ;; by the start, add this move
+	       (not (position 30 current-pieces)))
+	    (push (list p 30 1) moves))
+	 ;; Otherwise, try the card as long as not already
+	 ;; in home base
+	((not (or (= p home) (= p *default-red-start*) (= p *default-green-start*)))  
+	 ;; If get the potential places the current move to take this piece
+	 (setf current-move (use-card card p turn current-pieces op-pieces))
+	 ;; When this isn't empty, add to list of moves
+	 (when current-move (setf moves (append current-move moves)))))))
+    moves))
