@@ -570,7 +570,7 @@
 
 (defun game-over (g)
   (let ((score (sorry-eval-totals g)))
-    (or (= (aref score 0) *num-pieces*) 
+    (or (= (aref score 0) *num-pieces*)
 	(= (aref score 1) *num-pieces*))))
 
 
