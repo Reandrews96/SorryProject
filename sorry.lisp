@@ -24,6 +24,8 @@
 (defconstant *default-red-start* -1)
 (defconstant *default-green-start* -2)
 
+(defconstant *first-board-red* 11)
+
 (defconstant *default-red-home* -6)
 (defconstant *default-green-home* -16)
 
@@ -47,12 +49,12 @@
 ;; WIN-LOSS VALUES
 
 (defconstant *win-value* 4000)
-(defconstant *loss-value* 4000)
+(defconstant *loss-value* -4000)
 
-;; NEGATIVE and POSITIVE INFINITY
+;; NEGATIVE and POSITIVE INF
 
 (defconstant *neg-inf* -100000)
-(defconstant *pos-inf* -100000)
+(defconstant *pos-inf* 100000)
 
 
 ;; SORRY struct
@@ -276,7 +278,7 @@
 	   (reds (sorry-pieces-r game))
 	   (greens (sorry-pieces-g game))
 	   (curr-player (if (= turn *red*) reds greens))
-	   (index-piece (position loc-old curr-player))
+	   (index-piece  (position loc-old curr-player))
 	   (other-player (if (= turn *red*) greens reds))
 	   (index-other-piece (position loc-new other-player)))
       ;; When we land on another player
@@ -377,9 +379,9 @@
 	 ;; sorry card
 	 ((= p *default-red-start*)
 	  ;; When there aren't any pieces on the first sqaure
-	  (when (not (position 11 current-pieces))
+	  (when (not (position *first-board-red* current-pieces))
 	    ;; Push this move on
-	    (push (list p 11 1) moves))
+	    (push (list p *first-board-red* 1) moves))
 	  ;; Can also use sorry to move any of oponents
 	  ;; pieces back to their start
 	  (dotimes (i *num-pieces*)
@@ -484,16 +486,16 @@
      ((> new-val 37) (- new-val 37))
      ;; When we have just gone around board and can enter
      ;; red's safe zone, enter
-     ((and (= turn *red*) (< loc-curr 11) (> new-val 11))
-      (setf new-val (+ -10 (- new-val 11)))
+     ((and (= turn *red*) (< loc-curr *first-board-red*) (> new-val 11))
+      (setf new-val (+ -10 (- new-val *first-board-red*)))
       ;; When we pass home, just set the value to home
       (if (<= *default-red-home* new-val) *default-red-home*
 	;; Otherwise, the new value is fine
 	new-val))
      ;; When we have just gone round board and can enter
      ;; green's safe zone, enter
-     ((and (= turn *green*) (< loc-curr 30) (> new-val 30))
-      (setf new-val (+ -20 (- new-val 30)))
+     ((and (= turn *green*) (< loc-curr 29) (> new-val 29))
+      (setf new-val (+ -20 (- new-val 29)))
       ;; When we pass home, just set the value to home
       (if (<= *default-green-home* new-val) *default-green-home*
 	;; Otherwise, the new value is fine
@@ -568,8 +570,8 @@
 
 (defun game-over (g)
   (let ((score (sorry-eval-totals g)))
-    (or (= (aref score 1) *num-pieces*) 
-	(= (aref score 2) *num-pieces*))))
+    (or (= (aref score 0) *num-pieces*) 
+	(= (aref score 1) *num-pieces*))))
 
 
 ;; PLAY-CARD
@@ -580,6 +582,8 @@
 ;;           either the index of the other team's piece you wish
 ;;           to affect or the secondary use of the card
 ;; OUTPUTS: the modified game after applying card to this piece
+;; NOTE: at the start, regardless of what index you use, the next available
+;; piece will be moved onto the start spot
 
 (defun play-card (g index &optional index-or-card)
   ;; Get details of the current state of the game
@@ -593,7 +597,7 @@
     (cond 
      ;; When the card is a sorry, put piece on the spot
      ;; of the piece of the other team if possible
-     ((and (= card *sorry*) index-or-card)
+     ((and card (= card *sorry*) index-or-card)
       (do-move! g t piece-loc (aref op-pieces index-or-card) card))
      ((and card (null index-or-card))
       ;; Play it
@@ -601,9 +605,7 @@
       (t
        ;; Otherwise say that there is no available card.
        (format t 
-	       "Can't play card because no card has been drawn or wrong info given! ~%")
-       ;; return the game as is
-       g))))
+	       "Can't play card because no card has been drawn or wrong info given! ~%")))))
 
 ;; PASS
 ;; INPUT: g, a SORRY struct
@@ -647,9 +649,9 @@
 	 ;; When we are at start with red with a 1
 	 ((and (= p *default-red-start*)(= card 1)
 	       ;; And When there aren't any pieces on the first sqaure
-	       (not (position 11 current-pieces)))
+	       (not (position *first-board-red*  current-pieces)))
 	    ;; Push this move on
-	      (push (list p 11 1) moves))
+	      (push (list p *first-board-red* 1) moves))
 	 ;; The same is true for green, when we have a 1
 	 ;; and are on the start
 	 ((and (= p *default-green-start*) (= card 1)
