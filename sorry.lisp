@@ -25,9 +25,13 @@
 (defconstant *default-green-start* -2)
 
 (defconstant *first-board-red* 11)
+(defconstant *first-board-green* 29)
 
-(defconstant *default-red-home* -6)
-(defconstant *default-green-home* -16)
+(defconstant *start-red-safe* -100)
+(defconstant *start-green-safe* -200)
+
+(defconstant *default-red-home* -96)
+(defconstant *default-green-home* -196)
 
 ;; CARDS
 
@@ -118,11 +122,11 @@
     (dotimes (home-length-r 4)
       (format str "~A "
 	      (cond
-	       ((find (+ -10 home-length-r) red) 
+	       ((find (+ *start-red-safe* home-length-r) red) 
 		(concatenate 'string
 		  *red-symbol* 
 		  (write-to-string (position 
-				    (+ -10 home-length-r) red))))
+				    (+ *start-red-safe* home-length-r) red))))
 	       (t "__"))))
     (format str "RH~%")
     (dotimes (cols 8)
@@ -155,10 +159,10 @@
     (dotimes (home-length-g 4)
       (format str "~A "
 	      (cond
-	       ((find (+ -20 home-length-g) green) 
+	       ((find (- (- *default-green-home* 1)  home-length-g) green)
 		(concatenate 'string
 		  *green-symbol*
-		  (write-to-string (position (+ -20 home-length-g) green))))
+		  (write-to-string (position (- (- *default-green-home* 1) home-length-g) green))))
 	       (t "__"))))
     ;; Printing the bottom part of the board
     (dotimes (b-row 10)
@@ -393,8 +397,8 @@
 	 ((and (= p *default-green-start*) (null seen-start))
 	  ;; When there isn't something already right
 	  ;; by the start, add this move
-	  (when (not (position 30 current-pieces))
-	    (push (list p 30 1) moves))
+	  (when (not (position *first-board-green* current-pieces))
+	    (push (list p *first-board-green* 1) moves))
 	  ;; Can also use sorry to move any of oponents
 	  ;; pieces back to their start
 	  (dotimes (i *num-pieces*)
@@ -482,27 +486,36 @@
      ;; If we are moving 1 and on the red start
      ((= loc-curr *default-red-start*)
       ;; Move to start spot
-      11)
+      *first-board-red*)
      ;; If we are moving 1 and on green start
      ((= loc-curr *default-green-start*)
       ;; Move to green start
-      29)
+      *first-board-green*)
+     ;; If we have passed red's home
+     ((and (> new-val *default-red-home*) (< new-val 0))
+      ;; Just lock red in the home spot
+      *default-red-home*)
+     ;; If we have passed green's home
+     ((and (> new-val *default-green-home*) (< new-val 0))
+      ;; Just lock green in the home spot
+      *default-green-home*)
      ;; When we reach the top right corner, rotate back to 1
      ((> new-val 37) (- new-val 37))
      ;; When we have just gone around board and can enter
      ;; red's safe zone, enter
-     ((and (= turn *red*) (< loc-curr *first-board-red*) (> new-val 11))
-      (setf new-val (+ -10 (- new-val *first-board-red*)))
+     ((and (= turn *red*) (< loc-curr *first-board-red*) (> new-val 10))
+      (setf new-val (+ *start-red-safe* (- new-val *first-board-red*)))
       ;; When we pass home, just set the value to home
-      (if (<= *default-red-home* new-val) *default-red-home*
+      (if (< *default-red-home* new-val) *default-red-home*
 	;; Otherwise, the new value is fine
 	new-val))
      ;; When we have just gone round board and can enter
      ;; green's safe zone, enter
-     ((and (= turn *green*) (< loc-curr 29) (> new-val 29))
-      (setf new-val (+ -20 (- new-val 29)))
+     ((and (= turn *green*) (< loc-curr 29) (> new-val 28))
+      (setf new-val (+ *start-green-safe* (- new-val *first-board-green*)))
+      (format t "~A" new-val)
       ;; When we pass home, just set the value to home
-      (if (<= *default-green-home* new-val) *default-green-home*
+      (if (< *default-green-home* new-val) *default-green-home*
 	;; Otherwise, the new value is fine
 	new-val))
      ;; When we moved backwards in the top left corner
@@ -511,7 +524,7 @@
       (+ 37 (+ loc-curr steps)))
      ;; When we move backwards out of safe zone for red
      ;; move out
-     ((and (< steps 0) (< loc-curr 0) (= turn *red*) (< new-val -10))
+     ((and (< steps 0) (< loc-curr 0) (= turn *red*) (< new-val *start-red-safe*))
       (+ 11 (- new-val -10)))
      ;; When we move backwards out of safe zone for green
      ;; move out
@@ -662,8 +675,8 @@
 	 ((and (= p *default-green-start*) (= card 1)
 	  ;; And When there isn't something already right
 	       ;; by the start, add this move
-	       (not (position 30 current-pieces)))
-	    (push (list p 30 1) moves))
+	       (not (position *first-board-green* current-pieces)))
+	    (push (list p *first-board-green* 1) moves))
 	 ;; Otherwise, try the card as long as not already
 	 ;; in home base
 	((not (or (= p home) (= p *default-red-start*) (= p *default-green-start*)))  

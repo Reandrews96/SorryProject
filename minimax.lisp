@@ -146,6 +146,3 @@
 	;; return beta
 	;;  NOTE:  Depth can't be zero for a MIN node
 	beta))))
-
-(defun eval-func (g)
-  2)
