@@ -83,7 +83,7 @@
 	  (apply #'do-move! g nil mv)
 	  (let* ((index (position mv moves))
 		 (prob (/ (svref (sorry-deck g) index) (sorry-num-cards g)))
-		 (child-val (* prob (compute-min g (1+ curr-depth) alpha beta statty cutoff-depth))))
+		 (child-val (* prob 2 (compute-min g (+ 1 curr-depth) alpha beta statty cutoff-depth))))
 	    (undo-move! g)
 	    ;; Check for updating CURR-MAX...
 	    (when (> child-val alpha)
@@ -137,7 +137,7 @@
 	  (apply #'do-move! g nil mv)
 	  (let* ((index (position mv moves))
 		 (prob (/ (svref (sorry-deck g) index) (sorry-num-cards g)))
-		 (child-val (* prob (compute-max g (1+ curr-depth) alpha beta cutoff-depth statty))))
+		 (child-val (* prob (compute-max g (+ 1 curr-depth) alpha beta statty cutoff-depth))))
 	    (undo-move! g)
 	    (when (< child-val beta)
 	      (setf beta child-val)

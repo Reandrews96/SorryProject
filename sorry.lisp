@@ -408,8 +408,8 @@
 	 ;; Otherwise, try each card as long as not already
 	 ;; in home base or a start piece when we have already stored
 	 ;; the moves from start
-	 ((and (not (= p home)) (= p *default-red-start*) 
-		    (= p *default-green-start*))
+	 ((and (not (= p home)) (not (= p *default-red-start*))
+		   (not (= p *default-green-start*)))
 	  ;; Try each card on the piece 
 	  (dotimes (j (length *cards*))
 	    ;; As long as there are cards left
@@ -563,7 +563,6 @@
       ;; If we need to put a piece back in this spot, do so
       (when index-old-piece (setf (aref past-op-pieces index-old-piece) later-spot))
       ;; When the previous move moved us into the goal:
-      (format t "started here ~A and moved ~A here ~%" orig-spot later-spot)
       (cond
        ;; When we were red,
        ((= later-spot *default-red-home*)
