@@ -21,15 +21,22 @@
 (defconstant *red-symbol* "R")
 (defconstant *green-symbol* "G")
 
+;; Location of the off-board start positions
 (defconstant *default-red-start* -1)
 (defconstant *default-green-start* -2)
 
+;; Location where red and green start when they
+;; first move onto the board
 (defconstant *first-board-red* 11)
 (defconstant *first-board-green* 29)
 
+;; Location of the beginning of each player's 
+;; safe zone
 (defconstant *start-red-safe* -100)
 (defconstant *start-green-safe* -200)
 
+
+;;Location of each player's home
 (defconstant *default-red-home* -96)
 (defconstant *default-green-home* -196)
 
@@ -59,6 +66,10 @@
 
 (defconstant *neg-inf* -100000)
 (defconstant *pos-inf* 100000)
+
+;; PASS MOVE
+
+(defconstant *pass* nil)
 
 
 ;; SORRY struct
@@ -272,11 +283,15 @@
 ;; OUTPUT: Resulting SORRY struct if movel legal
 ;;         NIL otherwise
 
-(defun do-move! (game check-legal? loc-old loc-new card &key (show nil))
+(defun do-move! (game check-legal? loc-old loc-new card)
   (cond
    ;; If need to check for legal moves, do so
    ((and check-legal? (not (legal-move? game loc-old loc-new card)))
     (format t "Can't do illegal move. ~%" ))
+   ;; When the move is a pass (all are null)
+   ((and (null loc-old) (null loc-new))
+    ;; pass
+    (pass g))
    (t
     (let* ((turn (sorry-whose-turn? game))
 	   (reds (sorry-pieces-r game))
@@ -302,7 +317,7 @@
       ;; Reset the card to being null
       (setf (sorry-current-card game) nil)
       ;; Record the current move
-      (push (list loc-old loc-new index-other-piece) (sorry-move-history game))
+      (push (list loc-old loc-new index-other-piece card) (sorry-move-history game))
       game))))
 	   
 ;; SEND-TO-START
@@ -555,28 +570,42 @@
 	   ;; When the current turn is red, we know that the oponent
 	   ;; was red last time
 	   (past-op-pieces (if (= turn *red*) (sorry-pieces-r g)
-			       (sorry-pieces-g g)))
+			     (sorry-pieces-g g)))
+	   ;; Get the details of the previous move
 	   (orig-spot (first move))
 	   (later-spot (second move))
-	   (index-old-piece (third move)))
-      ;; If we need to put a piece back in this spot, do so
-      (when index-old-piece (setf (aref past-op-pieces index-old-piece) later-spot))
-      ;; When the previous move moved us into the goal:
+	   (index-old-piece (third move))
+	   (card (fourth move)))
       (cond
-       ;; When we were red,
-       ((= later-spot *default-red-home*)
-	;; decrement the score for red
-	(decf (aref (sorry-eval-totals g) 0)))
-       ;; When we were green
-       ((= later-spot *default-green-home*)
-	;; decrement the score for green
-	(decf (aref (sorry-eval-totals g) 1))))
-      ;; Otherwise, reset the piece to its old spot
-      (setf (aref past-current-pieces (position later-spot past-current-pieces)) orig-spot)
-      ;; Toggle the turn
-      (toggle-turn! g)
-      ;; Return g after its been reset
-      g))))
+       ;; When the move is a pass, just toggle whose turn to go back
+       ;; and reset the card
+       ((and (null orig-spot) (null later-spot))
+	(setf (sorry-current-card g) card)
+	(toggle-turn! g)
+	g)
+       (t 
+	;; If we need to put a piece back in this spot, do so
+	(when index-old-piece (setf (aref past-op-pieces index-old-piece) later-spot))
+	;; When the previous move moved us into the goal:
+	(cond
+	 ;; When we were red,
+	 ((= later-spot *default-red-home*)
+	  ;; decrement the score for red
+	  (decf (aref (sorry-eval-totals g) 0)))
+	 ;; When we were green
+	 ((= later-spot *default-green-home*)
+	  ;; decrement the score for green
+	  (decf (aref (sorry-eval-totals g) 1))))
+	;; Otherwise, reset the piece to its old spot
+	(setf (aref past-current-pieces (position later-spot past-current-pieces)) orig-spot)
+	;; Toggle the turn
+	(toggle-turn! g)
+	;; Set card to be the card that caused the change
+	(setf (sorry-current-card g) card)
+	;; Return g after its been reset
+	g))))))
+   
+   
 
 
 ;; GAME-OVER
@@ -628,6 +657,8 @@
 ;; OUTPUT: a modified g structure that has flipped the turn to the other player
 
 (defun pass (g)
+  ;; Add the pass to the move history
+  (push (list *pass* *pass* *pass* (sorry-current-card g)) (sorry-move-history g))
   ;; Set the card to be blank
   (setf (sorry-current-card g) nil)
   ;; Toggle the turn
