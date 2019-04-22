@@ -513,7 +513,6 @@
      ;; green's safe zone, enter
      ((and (= turn *green*) (< loc-curr 29) (> new-val 28))
       (setf new-val (+ *start-green-safe* (- new-val *first-board-green*)))
-      (format t "~A" new-val)
       ;; When we pass home, just set the value to home
       (if (< *default-green-home* new-val) *default-green-home*
 	;; Otherwise, the new value is fine
