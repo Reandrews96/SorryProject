@@ -39,6 +39,7 @@
       nil)
      ;; Case 2:  Game still on, compute best move...
      (t
+      (when (null (sorry-current-card g)) (draw-card g))
       ;; Call COMPUTE-MAX with init alpha/beta values
       (let* ((statty (make-stats))
 	     (best-move (compute-max g 0 *neg-inf* *pos-inf* statty cutoff-depth)))
@@ -127,7 +128,6 @@
      ((>= curr-depth cutoff-depth)
       ;; Let static eval func do its thing: assumes game not over
       (eval-func g))
-     
      ;; Otherwise, we need to use recursion!
      (t
       (let* ((moves (legal-moves g)))

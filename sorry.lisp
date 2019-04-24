@@ -713,4 +713,5 @@
 	 (setf current-move (use-card card p turn current-pieces op-pieces))
 	 ;; When this isn't empty, add to list of moves
 	 (when current-move (setf moves (append current-move moves)))))))
-    moves))
+    ;; If there are no valid moves, add the pass
+    (if moves moves (cons (list *pass* *pass* card) moves))))

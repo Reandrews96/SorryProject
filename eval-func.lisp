@@ -19,7 +19,7 @@
 			    (count *default-green-start* greens))))
 	;; Set amount to be amount constant*home + additional points for being
 	;; on the board and minus points for oponent
-	(setf amount (+ amount (* 5 home) (* 2 on-board) (* -1 op-on-board)))))
+	(setf amount (+ amount (* 50 home) (* 20 on-board) (* -10 op-on-board)))))
      ;; When its green's turn
      ((= turn *green*)
       ;; Get the number already at home and the number of its pieces
@@ -30,6 +30,6 @@
 			    (count *default-red-start* reds))))
 	;; Set amount to be amount constant*home + additional points for being
 	;; on the board and minus points for oponent
-	(setf amount (+ amount (* 5 home) (* 2 on-board) (* -1 op-on-board))))))
+	(setf amount (+ amount (* 50 home) (* 20 on-board) (* -10 op-on-board))))))
     amount))
      
