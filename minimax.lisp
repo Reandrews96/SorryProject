@@ -76,17 +76,16 @@
       (eval-func g))     
      ;; Recursive Case:  Need to do minimax with alpha-beta pruning
      (t
-      (let* ((moves (legal-moves g)))
+      (let* ((moves (legal-card-moves g)))
 	(incf (stats-num-potential-moves statty) (length moves))
 	;;(format t "Compute MAX:  legal-moves: ~A~%" moves)
 	(dolist (mv moves)
 	  (incf (stats-num-moves-done statty))
 	  (apply #'do-move! g nil mv)
 	  (let* ((index (position (third mv) *cards*))
-		 (prob (/ (svref (sorry-deck g) index) (sorry-num-cards g)))
-		 (child-val (* prob (compute-min g (+ 1 curr-depth) alpha beta statty cutoff-depth))))
+		 (child-val (compute-chance g (+ 1 curr-depth) alpha beta statty cutoff-depth 0)))
 	    (undo-move! g)
-	    (format t "Prob is ~A ~%" prob)
+	    ;;(format t "Prob is ~A ~%" prob)
 	    ;; Check for updating CURR-MAX...
 	    (when (> child-val alpha)
 	      (setf alpha child-val)
@@ -130,15 +129,14 @@
       (eval-func g))
      ;; Otherwise, we need to use recursion!
      (t
-      (let* ((moves (legal-moves g)))
+      (let* ((moves (legal-card-moves g)))
 	(incf (stats-num-potential-moves statty) (length moves))
 	;;(format t "Compute MIN:  legal-moves: ~A~%" moves)
 	(dolist (mv moves)
 	  (incf (stats-num-moves-done statty))
 	  (apply #'do-move! g nil mv)
 	  (let* ((index (position (third mv) *cards*))
-		 (prob (/ (svref (sorry-deck g) index) (sorry-num-cards g)))
-		 (child-val (* prob (compute-max g (+ 1 curr-depth) alpha beta statty cutoff-depth))))
+		 (child-val (compute-chance g (+ 1 curr-depth) alpha beta statty cutoff-depth 1)))
 	    (undo-move! g)
 	    (when (< child-val beta)
 	      (setf beta child-val)
@@ -147,3 +145,32 @@
 	;; return beta
 	;;  NOTE:  Depth can't be zero for a MIN node
 	beta))))
+
+;; COMPUTE-CHANCE
+;; ------------------------
+;;  INPUTS:  G, a SORRY struct
+;;           CURR-DEPTH, the depth of this MIN node
+;;           ALPHA, the alpha value
+;;           BETA, the beta value
+;;           STATTY, a STATS struct
+;;           CUTOFF-DEPTH, depth at which eval func should be used
+;;           MAX?, if the max (1) or min(0) should be called
+;;  OUTPUT:  The value of this CHANCE node according to rules
+;;           of EXPECTIMINIMAX with ALPHA-BETA pruning
+
+(defun compute-chance 
+    (g curr-depth alpha beta statty cutoff-depth max?)
+  (let ((total-sum 0))
+    (dotimes (i (length *cards*))
+      (let* ((child-val nil)
+	     (card (svref *cards* i))
+	     (prob (/ (svref (sorry-deck g) i) (sorry-num-cards g))))
+	(when (not (= prob 0))
+	  (setf (sorry-current-card g) card)
+	  (setf child-val 
+	    (if max? 
+		(compute-max g curr-depth alpha beta statty cutoff-depth) (compute-min g curr-depth alpha beta statty cutoff-depth)))
+	  (format t "CHILD VALUE: ~A ~%" child-val)
+	  (incf total-sum (* prob child-val)))))
+    total-sum))
+	
