@@ -54,7 +54,7 @@
   
 ;;  COMPUTE-MAX / COMPUTE-MIN
 ;; ---------------------------------------------------------------
-;;  INPUTS:  G, a SORRY struct
+;;  INPUTS:  GAME, a SORRY struct
 ;;           CURR-DEPTH, the current depth in the search
 ;;           CUTOFF-DEPTH, depth at which eval func should be used
 ;;           STATTY, a STATS struct
@@ -62,30 +62,28 @@
 ;;           Otherwise returns value of this node according to MINIMAX 
 ;;  SIDE EFFECT:  Modifies contents of STATTY
 
-(defun compute-max (g curr-depth alpha beta statty cutoff-depth)
-  ;;(format t "COMPUTE-MAX:  cd=~A~%" curr-depth)
+(defun compute-max (game curr-depth alpha beta statty cutoff-depth)
   (let ((best-move-so-far nil))
     (cond
      ;; Base Case 0:  Game over
-     ((game-over g)
+     ((game-over game)
       ;; just return that value:  either a LOSS or a DRAW
       (+ *loss-value* curr-depth))
      ;; Base Case 1:  Game not over, but we're at the cutoff depth
      ((>= curr-depth cutoff-depth)
       ;; Use the static evaluation function: assumes game not over
-      (eval-func g))     
+      (eval-func game))     
      ;; Recursive Case:  Need to do minimax with alpha-beta pruning
      (t
-      (let* ((moves (legal-card-moves g)))
+      (let* ((moves (legal-card-moves game)))
 	(incf (stats-num-potential-moves statty) (length moves))
-	;;(format t "Compute MAX:  legal-moves: ~A~%" moves)
+	(when (and (= 1 (length moves)) (zerop curr-depth))
+	  (return-from compute-max (first moves)))
 	(dolist (mv moves)
 	  (incf (stats-num-moves-done statty))
-	  (apply #'do-move! g nil mv)
-	  (let* ((index (position (third mv) *cards*))
-		 (child-val (compute-chance g (+ 1 curr-depth) alpha beta statty cutoff-depth 0)))
-	    (undo-move! g)
-	    ;;(format t "Prob is ~A ~%" prob)
+	  (apply #'do-move! game nil mv)
+	  (let* ((child-val (compute-chance game (+ 1 curr-depth) alpha beta statty cutoff-depth 0)))
+	  (undo-move! game)
 	    ;; Check for updating CURR-MAX...
 	    (when (> child-val alpha)
 	      (setf alpha child-val)
@@ -131,7 +129,6 @@
      (t
       (let* ((moves (legal-card-moves g)))
 	(incf (stats-num-potential-moves statty) (length moves))
-	;;(format t "Compute MIN:  legal-moves: ~A~%" moves)
 	(dolist (mv moves)
 	  (incf (stats-num-moves-done statty))
 	  (apply #'do-move! g nil mv)
@@ -170,7 +167,7 @@
 	  (setf child-val 
 	    (if max? 
 		(compute-max g curr-depth alpha beta statty cutoff-depth) (compute-min g curr-depth alpha beta statty cutoff-depth)))
-	  (format t "CHILD VALUE: ~A ~%" child-val)
 	  (incf total-sum (* prob child-val)))))
+    ;;(format t "Total sum for node: ~A depth: ~A ~%" total-sum curr-depth)
     total-sum))
 	

@@ -49,7 +49,7 @@
 (defconstant *cards* (vector *sorry* 1 5 8 10))
 
 ;; starting number of each card, indexes correspond to above
-(defconstant *num-each-card* (vector 4 4 4 4 4))
+(defconstant *num-each-card* (vector 8 4 4 4 4))
 
 ;; starting number of total cards
 (defconstant *start-deck-num* 20)
@@ -275,7 +275,7 @@
 
 ;; DO-MOVE!
 ;; ----------------------------------------------------------
-;; INPUTS: GAME, a SORRY struct
+;; INPUTS: G, a SORRY struct
 ;;         CHECK-LEGAL?, a boolean flag
 ;;         LOC-OLD, position of piece to move
 ;;         LOC-NEW, new position of piece
@@ -291,7 +291,7 @@
    ;; When the move is a pass (all are null)
    ((and (null loc-old) (null loc-new))
     ;; pass
-    (pass g))
+    (pass game))
    (t
     (let* ((turn (sorry-whose-turn? game))
 	   (reds (sorry-pieces-r game))

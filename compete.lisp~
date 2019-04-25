@@ -1,0 +1,12 @@
+;;  COMPETE
+;; --------------------------------------------------
+
+(defun compete
+    (red-depth  green-depth)
+  (let ((g (make-sorry)))
+    (while (not (game-over? g))
+      (cond
+       ((eq (whose-turn? g) *red*)
+	(apply #'do-move! g nil (compute-move g red-depth)))
+       (t
+	(apply #'do-move! g nil (compute-move g green-depth)))))))
