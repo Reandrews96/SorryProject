@@ -49,6 +49,8 @@
 		(- (stats-num-potential-moves statty)
 		   (stats-num-moves-done statty)))
 	(format t "BEST MOVE: ~A~%" best-move)
+	(format t "CARD WAS ~A ~%" (sorry-current-card g))
+	(format t "TURN WAS ~A ~%" (sorry-whose-turn? g))
 	best-move))))
   
   

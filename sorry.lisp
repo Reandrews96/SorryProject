@@ -49,10 +49,10 @@
 (defconstant *cards* (vector *sorry* 1 5 8 10))
 
 ;; starting number of each card, indexes correspond to above
-(defconstant *num-each-card* (vector 8 4 4 4 4))
+(defconstant *num-each-card* (vector 4 8 4 4 4))
 
 ;; starting number of total cards
-(defconstant *start-deck-num* 20)
+(defconstant *start-deck-num* 24)
 
 ;; constant for if the deck is infinite or not
 (defconstant *infinite-deck* t)
@@ -79,8 +79,6 @@
 ;;   PIECES-G --- location of pieces for the green player
 ;;   WHOSE-TURN? -- Either *red* or *green*
 ;;   DECK -- a vector representing the available cards
-;;   EVAL-TOTALS -- a vector representing the number of pieces in the home (goal)
-;;      of each player, goes (red, green)
 ;;   MOVE-HISTORY -- List of the moves that got us from the initial
 ;;      state to the current state
 
@@ -88,12 +86,19 @@
   (pieces-r (make-array *num-pieces* :initial-element *default-red-start*))
   (pieces-g (make-array *num-pieces* :initial-element *default-green-start*))
   (whose-turn? *red*)
-  (eval-totals (vector 0 0))
-  (num-cards 20)
+  (num-cards *start-deck-num*)
   (deck (copy-seq *num-each-card*))
   (current-card nil)
   move-history nil)
 
+;; GET-SCORE
+;; INPUTS: G, a SORRY struct
+;; OUTPUTS: vector containing score
+
+(defun get-score (g)
+  (let ((red (count *default-red-home* (sorry-pieces-r g)))
+	(green (count *default-green-home* (sorry-pieces-g g))))
+    (vector red green)))
 
 ;; PRINT-SORRY
 ;; --------------------------------------------------
@@ -106,7 +111,7 @@
 	(green (sorry-pieces-g game))
 	(card (sorry-current-card game))
 	(turn (sorry-whose-turn? game))
-	(score (sorry-eval-totals game)))
+	(score (get-score game)))
     (declare (ignore depth))
     (format str "Current game: ~% ~%")
     ;; Print out the board. The board starts at 1 in the upper left
@@ -266,10 +271,6 @@
     ;; located at the selected index
     (setf (sorry-current-card g) 
       (aref *cards* selected-index))
-    ;; When there are no legal moves for this card on this game
-    (when (null (legal-card-moves g))
-      (format t "You can't use this card ~A for your pieces. Passing! ~%" (sorry-current-card g))
-      (pass g))
     g))
 
 
@@ -306,13 +307,6 @@
 	(send-to-start game turn loc-new)) 
       ;; Update our piece's location and toggle the turn
       (setf (aref curr-player index-piece) loc-new)
-      (cond
-       ;; When we just moved our red piece into the red home
-       ;; update eval
-       ((= loc-new *default-red-home*) (incf (aref (sorry-eval-totals game) 0)))
-       ;; When we just moved our green piece into the green home
-       ;; update the eval
-       ((= loc-new *default-green-home*) (incf (aref (sorry-eval-totals game) 1))))
       (toggle-turn! game)
       ;; Reset the card to being null
       (setf (sorry-current-card game) nil)
@@ -475,7 +469,8 @@
   ;; Get the new location of the piece
   (let ((new-val (move-piece-on-board piece steps turn)))
     ;; When there isn't already a piece there
-    (when (not (position new-val curr-pieces))
+    (when (or (not (position new-val curr-pieces)) (= new-val *default-green-home*)
+		   (= new-val *default-red-home*))
       ;; Add this move to the list
       (push (list piece new-val card) moves)))
   moves)
@@ -511,11 +506,11 @@
       ;; Just lock red in the home spot
       *default-red-home*)
      ;; If we have passed green's home
-     ((and (> new-val *default-green-home*) (< new-val 0))
+     ((and (> new-val *default-green-home*) (< new-val *start-green-safe*))
       ;; Just lock green in the home spot
       *default-green-home*)
      ;; When we reach the top right corner, rotate back to 1
-     ((> new-val 37) (- new-val 37))
+     ((> new-val 36) (- new-val 36))
      ;; When we have just gone around board and can enter
      ;; red's safe zone, enter
      ((and (= turn *red*) (< loc-curr *first-board-red*) (> new-val 10))
@@ -586,16 +581,6 @@
        (t 
 	;; If we need to put a piece back in this spot, do so
 	(when index-old-piece (setf (aref past-op-pieces index-old-piece) later-spot))
-	;; When the previous move moved us into the goal:
-	(cond
-	 ;; When we were red,
-	 ((= later-spot *default-red-home*)
-	  ;; decrement the score for red
-	  (decf (aref (sorry-eval-totals g) 0)))
-	 ;; When we were green
-	 ((= later-spot *default-green-home*)
-	  ;; decrement the score for green
-	  (decf (aref (sorry-eval-totals g) 1))))
 	;; Otherwise, reset the piece to its old spot
 	(setf (aref past-current-pieces (position later-spot past-current-pieces)) orig-spot)
 	;; Toggle the turn
@@ -614,7 +599,7 @@
 ;; OUTPUT: T if either player has finished
 
 (defun game-over (g)
-  (let ((score (sorry-eval-totals g)))
+  (let ((score (get-score g)))
     (or (= (aref score 0) *num-pieces*)
 	(= (aref score 1) *num-pieces*))))
 
@@ -708,7 +693,8 @@
 	    (push (list p *first-board-green* 1) moves))
 	 ;; Otherwise, try the card as long as not already
 	 ;; in home base
-	((not (or (= p home) (= p *default-red-start*) (= p *default-green-start*)))  
+	 ((not (or (= p home) (= p *default-red-start*) (= p *default-green-start*)
+		   (= card *sorry*)))
 	 ;; If get the potential places the current move to take this piece
 	 (setf current-move (use-card card p turn current-pieces op-pieces))
 	 ;; When this isn't empty, add to list of moves

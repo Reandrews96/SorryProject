@@ -13,7 +13,7 @@
      ((= turn *red*)
       ;; Get the number already at home and the number of its pieces
       ;; And its oponents pieces on the board
-      (let ((home (aref (sorry-eval-totals g) 0))
+      (let ((home (aref (get-score g) 0))
 	    (on-board (- *num-pieces* (count *default-red-start* reds)))
 	    (op-on-board (- *num-pieces* 
 			    (count *default-green-start* greens))))
@@ -24,7 +24,7 @@
      ((= turn *green*)
       ;; Get the number already at home and the number of its pieces
       ;; and its oponents pieces on the board
-      (let ((home (aref (sorry-eval-totals g) 1))
+      (let ((home (aref (get-score g) 1))
 	    (on-board (- *num-pieces* (count *default-green-start* greens)))
 	    (op-on-board (- *num-pieces* 
 			    (count *default-red-start* reds))))

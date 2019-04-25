@@ -3,7 +3,8 @@
 
 (defun compete
     (red-depth green-depth g)
-    (while (not (game-over g))
+  ;;(while (not (game-over g))
+    (dotimes (i 1)
       (cond
        ((eq (sorry-whose-turn? g) *red*)
 	(format t "Red ~%")
