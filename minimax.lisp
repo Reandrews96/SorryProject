@@ -64,14 +64,17 @@
 ;;  SIDE EFFECT:  Modifies contents of STATTY
 
 (defun compute-max (game curr-depth alpha beta statty cutoff-depth)
+  ;;(format t "max node depth ~A~%" curr-depth)
   (let ((best-move-so-far nil))
     (cond
      ;; Base Case 0:  Game over
      ((game-over game)
+      (format t "am i in here ~%")
       ;; just return that value:  either a LOSS or a DRAW
       (+ *loss-value* curr-depth))
      ;; Base Case 1:  Game not over, but we're at the cutoff depth
      ((>= curr-depth cutoff-depth)
+     ;; (format t "I should be here when depth is cutoff ~%")
       ;; Use the static evaluation function: assumes game not over
       (eval-func game))     
      ;; Recursive Case:  Need to do minimax with alpha-beta pruning
@@ -85,8 +88,10 @@
 	(dolist (mv moves)
 	  (incf (stats-num-moves-done statty))
 	  (apply #'do-move! game nil mv)
-	  (let* ((child-val (compute-chance game (+ 1 curr-depth) alpha beta statty cutoff-depth 0)))
-	  (undo-move! game)
+	  (let* ((child-val (compute-chance game (+ 1 curr-depth) 
+					    alpha beta statty cutoff-depth 0)))
+	    (undo-move! game)
+	    ;;(when (= curr-depth 0) (format t "Move: ~A Val: ~A ~%" mv child-val))
 	    ;; Check for updating CURR-MAX...
 	    (when (> child-val alpha)
 	      (setf alpha child-val)
@@ -119,9 +124,11 @@
 
 (defun compute-min (g curr-depth alpha beta statty cutoff-depth)
   ;;(format t "COMPUTE-MIN:  cd=~A, alpha=~A, beta=~A~%" curr-depth alpha beta) 
+  ;;(format t "min node called ~%")
     (cond
      ;; Base Case 0: Game over... and score computed
      ((game-over g)
+      (format t "is min game over called? ~%")
       ;; just return that value: either a WIN or a DRAW
       (- *win-value* curr-depth))
      ;; Base Case 1:  Game not over, but we're at the cutoff depth
@@ -160,6 +167,7 @@
 
 (defun compute-chance 
     (g curr-depth alpha beta statty cutoff-depth max?)
+  ;;(format t "chance node ~%")
   (let ((total-sum 0))
     (dotimes (i (length *cards*))
       (let* ((child-val nil)
@@ -168,8 +176,9 @@
 	(when (not (= prob 0))
 	  (setf (sorry-current-card g) card)
 	  (setf child-val 
-	    (if max? 
-		(compute-max g curr-depth alpha beta statty cutoff-depth) (compute-min g curr-depth alpha beta statty cutoff-depth)))
+	    (if (= max? 1)
+		(compute-max g curr-depth alpha beta statty cutoff-depth) 
+	      (compute-min g curr-depth alpha beta statty cutoff-depth)))
 	  (incf total-sum (* prob child-val)))))
     ;;(format t "Total sum for node: ~A depth: ~A ~%" total-sum curr-depth)
     total-sum))
