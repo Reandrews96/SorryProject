@@ -1,4 +1,5 @@
 ;; EVAL-FUNC
+;; ------------------------------------------------------
 ;; INPUTS: g, a SORRY struct
 ;; OUTPUT: a number representing an evaluation of how well
 ;; the current player is doing
@@ -32,4 +33,15 @@
 	;; on the board and minus points for oponent
 	(setf amount (+ amount (* 50 home) (* 20 on-board) (* -10 op-on-board))))))
     amount))
-     
+
+
+
+;; CALC-CLOSENESS-TO-HOME
+;; --------------------------------------
+;; INPUTS: PIECES, a vector of the current pieces
+;;         TURN, a number representing the current turn
+;; OUTPUTS: a number representing how close to the home
+;;          the pieces are overall
+
+(defun calc-closeness-to-home (pieces turn)
+  'DO)

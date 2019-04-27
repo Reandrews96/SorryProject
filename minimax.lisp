@@ -50,7 +50,6 @@
 		   (stats-num-moves-done statty)))
 	(format t "BEST MOVE: ~A~%" best-move)
 	(format t "CARD WAS ~A ~%" (sorry-current-card g))
-	(format t "TURN WAS ~A ~%" (sorry-whose-turn? g))
 	best-move))))
   
   
@@ -79,6 +78,8 @@
      (t
       (let* ((moves (legal-card-moves game)))
 	(incf (stats-num-potential-moves statty) (length moves))
+	;; When we only have one move and we are at depth
+	;; zero, just return this move
 	(when (and (= 1 (length moves)) (zerop curr-depth))
 	  (return-from compute-max (first moves)))
 	(dolist (mv moves)

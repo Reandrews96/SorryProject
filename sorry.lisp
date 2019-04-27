@@ -229,16 +229,12 @@
   (- 1 plr))
 
 
-;; DRAW-CARD
+;; SELECT-CARD
 ;; -------------------------------------------------------
 ;; INPUT: G a SORRY struct
-;; OUTPUT: the modified game struct now with the card
+;; OUTPUT: the selected card
 
-(defun draw-card (g)
-  ;; Don't let the user draw another card
-  (when (sorry-current-card g) 
-    (format t "Already have card! Can't draw another. ~%")
-    (return-from draw-card nil))
+(defun select-card (g)
   ;; Get the current deck (a vector where each
   ;; index represents the number of  a particular
   ;; kind of card
@@ -260,19 +256,25 @@
 	(setf selected-index i)
 	;; And break from the loop
 	(return)))
-    ;; When we do not have an infinite deck
-    (when (not *infinite-deck*)
-      ;; Decrement the total number of cards and
-      ;; decremenet the total number of cards at the selected
-      ;; index
-      (decf (sorry-num-cards g))
-      (decf (aref curr-cards selected-index)))
-    ;; No matter what, set our current card to be the card
+    ;; No matter what, return the card
     ;; located at the selected index
-    (setf (sorry-current-card g) 
-      (aref *cards* selected-index))
-    g))
+    (aref *cards* selected-index)))
 
+;; DRAW-CARD
+;; -------------------------------------------------------
+;; INPUT: G a SORRY struct
+;; OUTPUT: the modified game struct now with the card
+
+(defun draw-card (g)
+  ;; Don't let the user draw another card
+  (cond 
+   ((sorry-current-card g) 
+    (format t "Already have card! Can't draw another. ~%")
+    (return-from draw-card nil))
+   ;; Otherwise select a new card using select card and set it
+   (t 
+    (setf (sorry-current-card g) (select-card g))
+    g)))
 
 ;; DO-MOVE!
 ;; ----------------------------------------------------------
@@ -506,7 +508,7 @@
       ;; Just lock red in the home spot
       *default-red-home*)
      ;; If we have passed green's home
-     ((and (> new-val *default-green-home*) (< new-val *start-green-safe*))
+     ((and (> new-val *default-green-home*) (< new-val (+ *default-green-home* 50)))
       ;; Just lock green in the home spot
       *default-green-home*)
      ;; When we reach the top right corner, rotate back to 1
@@ -530,15 +532,15 @@
      ;; When we moved backwards in the top left corner
      ;; Write around on indices
      ((and (< steps 0) (> loc-curr 0) (<= new-val 0))
-      (+ 37 (+ loc-curr steps)))
+      (+ 36 (+ loc-curr steps)))
      ;; When we move backwards out of safe zone for red
      ;; move out
      ((and (< steps 0) (< loc-curr 0) (= turn *red*) (< new-val *start-red-safe*))
-      (+ 11 (- new-val -10)))
+      (+ 11 (- new-val *start-red-safe*)))
      ;; When we move backwards out of safe zone for green
      ;; move out
      ((and (< steps 0) (< loc-curr 0) (= turn *green*) (< new-val -20))
-      (+ 30 (- new-val -20)))
+      (+ 29 (- new-val *start-green-safe*)))
      (t new-val))))
 
 
