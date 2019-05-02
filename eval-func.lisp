@@ -5,7 +5,7 @@
 ;; the current player is doing
 
 (defun eval-func (g)
-  (let* ((turn (sorry-whose-turn? g))
+  (let* ((turn (if (= (sorry-whose-turn? g) *red*) *green* *red*))
 	 (reds (sorry-pieces-r g))
 	 (greens (sorry-pieces-g g))
 	 (amount 0))
@@ -39,6 +39,43 @@
 	;; locations of pieces on board
 	(setf amount (+ amount (* 100 home) (* 20 on-board) (* -10 op-on-board)
 			(* 30 my-home-close) (* -15 my-op-close))))))
+    amount))
+
+(defun eval-funk (g home-pt on-board-pt op-on-board-pt my-home-close-pt my-op-close-pt)
+  (let* ((turn (sorry-whose-turn? g))
+	 (reds (sorry-pieces-r g))
+	 (greens (sorry-pieces-g g))
+	 (amount 0))
+    (cond
+     ;; When its red's turn
+     ((= turn *red*)
+      ;; Get the number already at home and the number of its pieces
+      ;; And its oponents pieces on the board
+      (let ((home (aref (get-score g) 0))
+	    (on-board (- *num-pieces* (count *default-red-start* reds)))
+	    (op-on-board (- *num-pieces* 
+			    (count *default-green-start* greens)))
+	    (my-home-close (calc-closeness-to-home reds *red*))
+	    (my-op-close (calc-closeness-to-home greens *green*)))
+	;; Set amount to be amount constant*home + additional points for being
+	;; on the board and minus points for oponent
+	(setf amount (+ amount (* home-pt home) (* on-board-pt on-board) (* op-on-board-pt op-on-board)
+			(* my-home-close-pt my-home-close) (* my-op-close-pt my-op-close)))))
+     ;; When its green's turn
+     ((= turn *green*)
+      ;; Get the number already at home and the number of its pieces
+      ;; and its oponents pieces on the board
+      (let ((home (aref (get-score g) 1))
+	    (on-board (- *num-pieces* (count *default-green-start* greens)))
+	    (op-on-board (- *num-pieces* 
+			    (count *default-red-start* reds)))
+	    (my-home-close (calc-closeness-to-home greens *green*))
+	    (my-op-close (calc-closeness-to-home reds *red*)))
+	;; Set amount to be amount constant*home + additional points for being
+	;; on the board and minus points for oponent and points for
+	;; locations of pieces on board
+	(setf amount (+ amount (* home-pt home) (* on-board-pt on-board) (* op-on-board-pt op-on-board)
+			(* my-home-close-pt my-home-close) (* my-op-close-pt my-op-close))))))
     amount))
 
 
