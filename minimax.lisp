@@ -64,19 +64,19 @@
 ;;  SIDE EFFECT:  Modifies contents of STATTY
 
 (defun compute-max (game curr-depth alpha beta statty cutoff-depth)
-  ;;(format t "max node depth ~A~%" curr-depth)
+  (format t "max node called depth ~A~%" curr-depth)
   (let ((best-move-so-far nil))
     (cond
      ;; Base Case 0:  Game over
      ((game-over game)
-      (format t "am i in here ~%")
       ;; just return that value:  either a LOSS or a DRAW
       (+ *loss-value* curr-depth))
      ;; Base Case 1:  Game not over, but we're at the cutoff depth
      ((>= curr-depth cutoff-depth)
      ;; (format t "I should be here when depth is cutoff ~%")
       ;; Use the static evaluation function: assumes game not over
-      (eval-func game))     
+      (format t "Eval: ~A ~%" (eval-func game))
+      (eval-func game))
      ;; Recursive Case:  Need to do minimax with alpha-beta pruning
      (t
       (let* ((moves (legal-card-moves game)))
@@ -100,7 +100,7 @@
 		(return-from compute-max
 		  (cond
 		   ((zerop curr-depth)
-		    (format t "     ROOT NODE ALPHA: ~A~%" alpha)
+		    (format t "     ROOT NODE VALUE: ~A~%" (fround alpha))
 		    best-move-so-far)
 		   (t
 		    alpha)))))))
@@ -108,7 +108,7 @@
 	;; we're at depth 0 or not
 	(cond
 	 ((zerop curr-depth)
-	  (format t "ROOT NODE VALUE: ~A~%" alpha)
+	  (format t "ROOT NODE VALUE: ~A~%" (fround alpha))
 	  best-move-so-far)
 	 (t
 	  alpha)))))))
@@ -124,16 +124,16 @@
 
 (defun compute-min (g curr-depth alpha beta statty cutoff-depth)
   ;;(format t "COMPUTE-MIN:  cd=~A, alpha=~A, beta=~A~%" curr-depth alpha beta) 
-  ;;(format t "min node called ~%")
+  (format t "min node called ~%")
     (cond
      ;; Base Case 0: Game over... and score computed
      ((game-over g)
-      (format t "is min game over called? ~%")
       ;; just return that value: either a WIN or a DRAW
       (- *win-value* curr-depth))
      ;; Base Case 1:  Game not over, but we're at the cutoff depth
      ((>= curr-depth cutoff-depth)
       ;; Let static eval func do its thing: assumes game not over
+      (format t "Eval: ~A ~%" (eval-func g))
       (eval-func g))
      ;; Otherwise, we need to use recursion!
      (t
@@ -167,7 +167,7 @@
 
 (defun compute-chance 
     (g curr-depth alpha beta statty cutoff-depth max?)
-  ;;(format t "chance node ~%")
+  (format t "chance node ~%")
   (let ((total-sum 0))
     (dotimes (i (length *cards*))
       (let* ((child-val nil)
