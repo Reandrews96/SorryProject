@@ -49,10 +49,10 @@
 (defconstant *cards* (vector *sorry* 1 5 8 10))
 
 ;; starting number of each card, indexes correspond to above
-(defconstant *num-each-card* (vector 2 8 4 4 4))
+(defconstant *num-each-card* (vector 2 4 4 4 4))
 
 ;; starting number of total cards
-(defconstant *start-deck-num* 22)
+(defconstant *start-deck-num* 18)
 
 ;; constant for if the deck is infinite or not
 (defconstant *infinite-deck* t)
@@ -666,6 +666,9 @@
 	 (home (if (= turn *red*) *default-red-home* *default-green-home*))
 	 (card (sorry-current-card g))
 	 (deck (sorry-deck g))
+	 ;; Makes sure we don't generate repeat moves
+	 ;; from pieces in start
+	 (not-seen-start-piece t)
 	 ;; Initialize moves to be empty
 	 (moves ())
 	 (current-move nil))
@@ -673,26 +676,36 @@
     (dotimes (i *num-pieces*)
       (let ((p (aref current-pieces i)))
 	;; When we have piece is at start and card is sorry
+	;; and we haven't already seen a piece at start
 	(cond
-	 ((and (or (= p *default-red-start*) (= p *default-green-start*))(= card *sorry*))
-	  ;; Can also use sorry to move any of oponents
+	 ((and (or (= p *default-red-start*) (= p *default-green-start*))
+	       (= card *sorry*) not-seen-start-piece)
+	  ;; Set not seen start piece to false
+	  (setf not-seen-start-piece nil)
+	  ;; Can use sorry to move any of oponents
 	  ;; pieces back to their start
 	  (dotimes (i *num-pieces*)
 	    (when (> (aref op-pieces i) 0)
 	      (push (list p (aref op-pieces i) *sorry*) moves))))
-	 ;; When we are at start with red with a 1
-	 ((and (= p *default-red-start*)(= card 1)
+	 ;; When we are at start with red with a 1 and we haven't
+	 ;; already found moves for start pieces
+	 ((and (= p *default-red-start*)(= card 1) not-seen-start-piece
 	       ;; And When there aren't any pieces on the first sqaure
 	       (not (position *first-board-red*  current-pieces)))
-	    ;; Push this move on
-	      (push (list p *first-board-red* 1) moves))
+	  ;; Set not seen start piece to false
+	  (setf not-seen-start-piece nil)
+	  ;; Push this move on
+	  (push (list p *first-board-red* 1) moves))
 	 ;; The same is true for green, when we have a 1
-	 ;; and are on the start
-	 ((and (= p *default-green-start*) (= card 1)
-	  ;; And When there isn't something already right
+	 ;; and are on the start and we haven't already
+	 ;; generated moves for a start piece
+	 ((and (= p *default-green-start*) (= card 1) not-seen-start-piece
+	       ;; And When there isn't something already right
 	       ;; by the start, add this move
 	       (not (position *first-board-green* current-pieces)))
-	    (push (list p *first-board-green* 1) moves))
+	  ;; Set not seen start to false
+	  (setf not-seen-start-piece nil)
+	  (push (list p *first-board-green* 1) moves))
 	 ;; Otherwise, try the card as long as not already
 	 ;; in home base
 	 ((not (or (= p home) (= p *default-red-start*) (= p *default-green-start*)
