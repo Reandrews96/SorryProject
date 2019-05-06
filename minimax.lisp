@@ -27,11 +27,13 @@
 ;; -------------------------------------------------------------
 ;;  INPUT:  G, a sorry struct
 ;;          CUTOFF-DEPTH, depth at which eval func should be used
+;;          EVAL-FUNC, a function that calculates the value
+;;          of the particular state of the game
 ;;  OUTPUT:  The best move according to MINIMAX,
 ;;   using the static eval func, EVAL-FUNC.  Searches to
 ;;   a depth of *CUTOFF-DEPTH*.
 
-(defun compute-move (g cutoff-depth)
+(defun compute-move (g cutoff-depth eval-func)
     (cond
      ;; Case 1:  Game over...
      ((game-over g)
@@ -42,7 +44,7 @@
       (when (null (sorry-current-card g)) (draw-card g))
       ;; Call COMPUTE-MAX with init alpha/beta values
       (let* ((statty (make-stats))
-	     (best-move (compute-max g 0 *neg-inf* *pos-inf* statty cutoff-depth)))
+	     (best-move (compute-max g 0 *neg-inf* *pos-inf* statty cutoff-depth eval-func)))
 	;; Report number of moves considered...
 	(format t "NUM-MOVES-DONE: ~A, PRUNED-MOVES: ~A~%" 
 		(stats-num-moves-done statty) 
@@ -59,11 +61,13 @@
 ;;           CURR-DEPTH, the current depth in the search
 ;;           CUTOFF-DEPTH, depth at which eval func should be used
 ;;           STATTY, a STATS struct
+;;           EVAL-FUNC, a function to calculate the value of a particular
+;;             move/state in the game
 ;;  OUTPUT:  If CURR-DEPTH is zero, returns best move
 ;;           Otherwise returns value of this node according to MINIMAX 
 ;;  SIDE EFFECT:  Modifies contents of STATTY
 
-(defun compute-max (game curr-depth alpha beta statty cutoff-depth)
+(defun compute-max (game curr-depth alpha beta statty cutoff-depth eval-func)
   ;;(format t "max node called depth ~A~%" curr-depth)
   (let ((best-move-so-far nil))
     (cond
@@ -76,7 +80,7 @@
      ;; (format t "I should be here when depth is cutoff ~%")
       ;; Use the static evaluation function: assumes game not over
       ;;(format t "Eval: ~A ~%" (eval-func game))
-      (eval-func game))
+      (funcall eval-func game))
      ;; Recursive Case:  Need to do minimax with alpha-beta pruning
      (t
       (let* ((moves (legal-card-moves game)))
@@ -89,7 +93,8 @@
 	  (incf (stats-num-moves-done statty))
 	  (apply #'do-move! game nil mv)
 	  (let* ((child-val (compute-chance game (+ 1 curr-depth) 
-					    alpha beta statty cutoff-depth 0)))
+					    alpha beta statty cutoff-depth 0
+					    eval-func)))
 	    (undo-move! game)
 	    ;;(when (= curr-depth 0) (format t "Move: ~A Val: ~A ~%" mv child-val))
 	    ;; Check for updating CURR-MAX...
@@ -118,11 +123,13 @@
 ;;  INPUTS:  G, a SORRY struct
 ;;           CURR-DEPTH, the depth of this MIN node
 ;;           CUTOFF-DEPTH, depth at which eval func should be used
-;;           STATTY, a STATS struct
+;;           STATTY, a STATS struct,
+;;           EVAL-FUNC, a function used to calculate the value of a
+;;            move/state in the game
 ;;  OUTPUT:  The value of this MIN node according to rules
 ;;           of MINIMAX with ALPHA-BETA pruning
 
-(defun compute-min (g curr-depth alpha beta statty cutoff-depth)
+(defun compute-min (g curr-depth alpha beta statty cutoff-depth eval-func)
   ;;(format t "COMPUTE-MIN:  cd=~A, alpha=~A, beta=~A~%" curr-depth alpha beta) 
   ;;(format t "min node called ~%")
     (cond
@@ -134,7 +141,7 @@
      ((>= curr-depth cutoff-depth)
       ;; Let static eval func do its thing: assumes game not over
       ;;(format t "Eval: ~A ~%" (eval-func g))
-      (eval-func g))
+      (funcall eval-func g))
      ;; Otherwise, we need to use recursion!
      (t
       (let* ((moves (legal-card-moves g)))
@@ -142,8 +149,8 @@
 	(dolist (mv moves)
 	  (incf (stats-num-moves-done statty))
 	  (apply #'do-move! g nil mv)
-	  (let* ((index (position (third mv) *cards*))
-		 (child-val (compute-chance g (+ 1 curr-depth) alpha beta statty cutoff-depth 1)))
+	  (let ((child-val (compute-chance g (+ 1 curr-depth) alpha beta statty cutoff-depth 1
+					   eval-func)))
 	    (undo-move! g)
 	    (when (< child-val beta)
 	      (setf beta child-val)
@@ -162,11 +169,13 @@
 ;;           STATTY, a STATS struct
 ;;           CUTOFF-DEPTH, depth at which eval func should be used
 ;;           MAX?, if the max (1) or min(0) should be called
+;;           EVAL-FUNC, a function used to calculate the value of
+;;             move/state
 ;;  OUTPUT:  The value of this CHANCE node according to rules
 ;;           of EXPECTIMINIMAX with ALPHA-BETA pruning
 
 (defun compute-chance 
-    (g curr-depth alpha beta statty cutoff-depth max?)
+    (g curr-depth alpha beta statty cutoff-depth max? eval-func)
   ;;(format t "chance node ~%")
   (let ((total-sum 0))
     (dotimes (i (length *cards*))
@@ -177,8 +186,8 @@
 	  (setf (sorry-current-card g) card)
 	  (setf child-val 
 	    (if (= max? 1)
-		(compute-max g curr-depth alpha beta statty cutoff-depth) 
-	      (compute-min g curr-depth alpha beta statty cutoff-depth)))
+		(compute-max g curr-depth alpha beta statty cutoff-depth eval-func) 
+	      (compute-min g curr-depth alpha beta statty cutoff-depth eval-func)))
 	  (incf total-sum (* prob child-val)))))
     ;;(format t "Total sum for node: ~A depth: ~A ~%" total-sum curr-depth)
     total-sum))

@@ -7,10 +7,10 @@
       (cond
        ((eq (sorry-whose-turn? g) *red*)
 	(format t "Red ~%")
-	(apply #'do-move! g nil (compute-move g red-depth)))
+	(apply #'do-move! g nil (compute-move g red-depth #'eval-func)))
        (t
 	(format t "Green ~%")
-	(apply #'do-move! g nil (compute-move g green-depth)))))
+	(apply #'do-move! g nil (compute-move g green-depth #'eval-func)))))
     g)
 
 
@@ -23,7 +23,7 @@
     (cond
       ((eq (sorry-whose-turn? g) *red*)
        (format t "Red (AI) ~%")
-       (apply #'do-move! g nil (compute-move g depth)))
+       (apply #'do-move! g nil (compute-move g depth #'eval-func)))
       (t
        (format t "Green (RANDOM) ~%")
        (setf (sorry-current-card g) (select-card g))
@@ -34,3 +34,9 @@
 	 (format t "RANDOM MOVE ~A ~%" move)
 	 (apply #'do-move! g nil move)))))
   g)
+
+;; COMPETE-DIFF-EVAL
+;; -----------------------------
+
+(defun compete-diff-eval (g eval-red eval-green)
+  'define)

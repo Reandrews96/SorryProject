@@ -30,7 +30,7 @@
 (defconstant *first-board-red* 11)
 (defconstant *first-board-green* 29)
 
-;; Location of the beginning of each player's 
+;; Location of the beginning of each player's
 ;; safe zone
 (defconstant *start-red-safe* -100)
 (defconstant *start-green-safe* -200)
@@ -93,11 +93,14 @@
 
 ;; GET-SCORE
 ;; INPUTS: G, a SORRY struct
-;; OUTPUTS: vector containing score
+;; OUTPUTS: vector containing score, first red's number of pieces at home
+;;          then greens
 
 (defun get-score (g)
+  ;; Get each score
   (let ((red (count *default-red-home* (sorry-pieces-r g)))
 	(green (count *default-green-home* (sorry-pieces-g g))))
+    ;; return a vector containing each score
     (vector red green)))
 
 ;; PRINT-SORRY
@@ -125,35 +128,35 @@
       ;; Printing top row
       (format str "~A "
 	      (cond
-	       ((find (+ f-row 1) red) 
+	       ((find (+ f-row 1) red)
 		(concatenate 'string
-		  *red-symbol* 
+		  *red-symbol*
 		  (write-to-string (position (+ f-row 1) red))))
-	       ((find (+ f-row 1) green) 
+	       ((find (+ f-row 1) green)
 		(concatenate 'string
-		  *green-symbol* 
+		  *green-symbol*
 		  (write-to-string (position (+ f-row 1) green))))
 	       (t  "__"))))
     ;; Printing R's safe zone
     (dotimes (home-length-r 4)
       (format str "~A "
 	      (cond
-	       ((find (+ *start-red-safe* home-length-r) red) 
+	       ((find (+ *start-red-safe* home-length-r) red)
 		(concatenate 'string
-		  *red-symbol* 
-		  (write-to-string (position 
+		  *red-symbol*
+		  (write-to-string (position
 				    (+ *start-red-safe* home-length-r) red))))
 	       (t "__"))))
     (format str "RH~%")
     (dotimes (cols 8)
       ;; Printing each of the sides of the board
       (format str "               ~A"
-	      (cond 
-	       ((find (- 36 cols) red) (concatenate 'string 
+	      (cond
+	       ((find (- 36 cols) red) (concatenate 'string
 					 *red-symbol*
 					 (write-to-string (position
 							   (- 36 cols) red))))
-	       ((find (- 36 cols) green) (concatenate 'string 
+	       ((find (- 36 cols) green) (concatenate 'string
 					 *green-symbol*
 					 (write-to-string (position
 							   (- 36 cols) green))))
@@ -161,11 +164,11 @@
       (format str "                         ")
       (format str "~A ~%"
 	      (cond
-	       ((find (+ 11 cols) red) (concatenate 'string 
+	       ((find (+ 11 cols) red) (concatenate 'string
 					 *red-symbol*
 					 (write-to-string (position
 							   (+ 11 cols) red))))
-	       ((find (+ 11 cols) green) (concatenate 'string 
+	       ((find (+ 11 cols) green) (concatenate 'string
 					 *green-symbol*
 					 (write-to-string (position
 							   (+ 11 cols) green))))
@@ -182,19 +185,19 @@
 	       (t "__"))))
     ;; Printing the bottom part of the board
     (dotimes (b-row 10)
-      (format str "~A " 
+      (format str "~A "
 	      (cond
-	       ((find (- 28 b-row) red) (concatenate 'string 
+	       ((find (- 28 b-row) red) (concatenate 'string
 					 *red-symbol*
 					 (write-to-string (position
 							   (- 28 b-row) red))))
-	       ((find (- 28 b-row) green) (concatenate 'string 
+	       ((find (- 28 b-row) green) (concatenate 'string
 					 *green-symbol*
 					 (write-to-string (position
 							   (- 28 b-row) green))))
 	       (t "__"))))
     (format str "~%")
-    
+
     ;; Print out the score and how many pieces still in start
     (format str "~%Red Team's Score: ~A Green Team's Score: ~A ~%"
 	    (svref score *red*) (svref score *green*))
@@ -251,7 +254,7 @@
       ;; When we are either at the randomly selected index of card
       ;; Or it was somewhere in the "pile" of cards of this type
       ;; that we just added
-      (when (<= val current-sum) 
+      (when (<= val current-sum)
 	;; Set the selected index to be the current one
 	(setf selected-index i)
 	;; And break from the loop
@@ -267,12 +270,12 @@
 
 (defun draw-card (g)
   ;; Don't let the user draw another card
-  (cond 
-   ((sorry-current-card g) 
+  (cond
+   ((sorry-current-card g)
     (format t "Already have card! Can't draw another. ~%")
     (return-from draw-card nil))
    ;; Otherwise select a new card using select card and set it
-   (t 
+   (t
     (setf (sorry-current-card g) (select-card g))
     g)))
 
@@ -306,7 +309,7 @@
       ;; When we land on another player
       (when index-other-piece
 	;; send them back t start
-	(send-to-start game turn loc-new)) 
+	(send-to-start game turn loc-new))
       ;; Update our piece's location and toggle the turn
       (setf (aref curr-player index-piece) loc-new)
       (toggle-turn! game)
@@ -315,7 +318,7 @@
       ;; Record the current move
       (push (list loc-old loc-new index-other-piece card) (sorry-move-history game))
       game))))
-	   
+
 ;; SEND-TO-START
 ;; ----------------------------------------------------------
 ;; INPUTS: GAME, a SORRY struct
@@ -363,75 +366,6 @@
      ;; or their safe zone
      ((or (position loc-new curr-player)(and affected-piece (< loc-new 0))) nil)
      (t t))))
-
-
-;;  LEGAL-MOVES
-;; ------------------------------------------------------
-;;  INPUT:  G, a SORRY game struct
-;;  OUTPUT:  A list of the legal moves for whoever's turn it is.
-;;  NOTE:  Fetches legal moves for all the LIVE pieces of whoever's 
-;;         turn it is. 
-
-(defun legal-moves (g)
-  ;; Get information about the current state of the game
-  (let* ((turn (sorry-whose-turn? g))
-	 (current-pieces (if (= turn *red*) (sorry-pieces-r g)
-			   (sorry-pieces-g g)))
-	 (op-pieces (if (= turn *red*) (sorry-pieces-g g)
-			       (sorry-pieces-r g)))
-	 (home (if (= turn *red*) *default-red-home* *default-green-home*))
-	 (deck (sorry-deck g))
-	 (seen-start nil)
-	 ;; Initialize moves to be empty
-	 (moves ())
-	 (current-move nil))
-    ;; For all the pieces
-    (dotimes (i *num-pieces*)
-      (let ((p (aref current-pieces i)))
-	;; When we have not already gotten the piece home
-	(cond
-	 ;; When we are at start with red,
-	 ;; can only move to the first square by its start or use
-	 ;; sorry card
-	 ((and (= p *default-red-start*) (null seen-start))
-	  ;; When there aren't any pieces on the first sqaure
-	  (when (not (position *first-board-red* current-pieces))
-	    ;; Push this move on
-	    (push (list p *first-board-red* 1) moves))
-	  ;; Can also use sorry to move any of oponents
-	  ;; pieces back to their start
-	  (dotimes (i *num-pieces*)
-	    (when (> (aref op-pieces i) 0)
-	      (push (list p (aref op-pieces i) *sorry*) moves)))
-	  (setf seen-start t))
-	 ;; The same is true for green
-	 ((and (= p *default-green-start*) (null seen-start))
-	  ;; When there isn't something already right
-	  ;; by the start, add this move
-	  (when (not (position *first-board-green* current-pieces))
-	    (push (list p *first-board-green* 1) moves))
-	  ;; Can also use sorry to move any of oponents
-	  ;; pieces back to their start
-	  (dotimes (i *num-pieces*)
-	    (when (> (aref op-pieces i) 0)
-	      (push (list p (aref op-pieces i) *sorry*) moves)))
-	  (setf seen-start t))
-	 ;; Otherwise, try each card as long as not already
-	 ;; in home base or a start piece when we have already stored
-	 ;; the moves from start
-	 ((and (not (= p home)) (not (= p *default-red-start*))
-		   (not (= p *default-green-start*)))
-	  ;; Try each card on the piece 
-	  (dotimes (j (length *cards*))
-	    ;; As long as there are cards left
-	    (when (> (aref deck j) 0)
-	      ;; If get the potential places the current move to take this piece
-	      (setf current-move (use-card (aref *cards* j) p turn current-pieces op-pieces))
-	      ;; When this isn't empty, add to list of moves
-	      (when current-move (setf moves (append current-move moves)))))))))
-    moves))
-    
-
 
 ;; USE-CARD
 ;; -----------------------------------------------
@@ -490,7 +424,7 @@
     (cond
      ;; If the current location is the start
      ;; and we try to move more than just one
-     ((and (or (= loc-curr *default-red-start*) 
+     ((and (or (= loc-curr *default-red-start*)
 	       (= loc-curr *default-green-start*))
 	   (not (= steps 1)))
       ;; Return nil, can't move
@@ -580,7 +514,7 @@
 	(setf (sorry-current-card g) card)
 	(toggle-turn! g)
 	g)
-       (t 
+       (t
 	;; If we need to put a piece back in this spot, do so
 	(when index-old-piece (setf (aref past-op-pieces index-old-piece) later-spot))
 	;; Otherwise, reset the piece to its old spot
@@ -591,8 +525,8 @@
 	(setf (sorry-current-card g) card)
 	;; Return g after its been reset
 	g))))))
-   
-   
+
+
 
 
 ;; GAME-OVER
@@ -626,7 +560,7 @@
 	 (op-pieces (if (= turn *red*) (sorry-pieces-g g)
 		      (sorry-pieces-r g)))
 	 (piece-loc (aref current-pieces index)))
-    (cond 
+    (cond
      ;; When the card is a sorry, put piece on the spot
      ;; of the piece of the other team if possible
      ((and card (= card *sorry*) index-or-card)
@@ -636,7 +570,7 @@
       (do-move! g t piece-loc (move-piece-on-board piece-loc card turn) card))
       (t
        ;; Otherwise say that there is no available card.
-       (format t 
+       (format t
 	       "Can't play card because no card has been drawn or wrong info given! ~%")))))
 
 ;; PASS
@@ -710,9 +644,9 @@
 	 ;; in home base
 	 ((not (or (= p home) (= p *default-red-start*) (= p *default-green-start*)
 		   (= card *sorry*)))
-	 ;; If get the potential places the current move to take this piece
-	 (setf current-move (use-card card p turn current-pieces op-pieces))
-	 ;; When this isn't empty, add to list of moves
-	 (when current-move (setf moves (append current-move moves)))))))
+	  ;; If get the potential places the current move to take this piece
+	  (setf current-move (use-card card p turn current-pieces op-pieces))
+	  ;; When this isn't empty, add to list of moves
+	  (when current-move (setf moves (append current-move moves)))))))
     ;; If there are no valid moves, add the pass
     (if moves moves (cons (list *pass* *pass* card) moves))))
