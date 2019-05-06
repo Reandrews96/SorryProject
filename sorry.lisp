@@ -374,22 +374,22 @@
 ;;         TURN, a value representing whose turn it is (red or green)
 ;;         CURR-PIECES, the pieces belonging to the current player
 ;;         OP-PIECES, the pieces belonging to the other player
+;;         MOVES, currently accumulated moves
 ;; OUTPUTS: Move accumulator
 
-(defun use-card (card piece turn curr-pieces op-pieces)
-  (let ((moves nil))
-    (cond
-     ;; When the card is a 10
-     ((= card 10)
-      ;; See if you can either move back 1, and if so, update moves
-      (setf moves (check-move-open -1 piece turn curr-pieces moves card))
-      ;; Or if you can move forward 10, do so
-      (setf moves (check-move-open card piece turn curr-pieces moves card)))
-     ;; Otherwise
-     (t
-      ;; Just  get new position and add this new move if available
-      (setf moves (check-move-open card piece turn curr-pieces moves card))))
-    moves))
+(defun use-card (card piece turn curr-pieces op-pieces moves)
+  (cond
+   ;; When the card is a 10
+   ((= card 10)
+    ;; See if you can either move back 1, and if so, update moves
+    (setf moves (check-move-open -1 piece turn curr-pieces moves card))
+    ;; Or if you can move forward 10, do so
+    (setf moves (check-move-open card piece turn curr-pieces moves card)))
+   ;; Otherwise
+   (t
+    ;; Just  get new position and add this new move if available
+    (setf moves (check-move-open card piece turn curr-pieces moves card))))
+  moves)
 
 
 ;; CHECK-MOVE-OPEN
@@ -645,8 +645,6 @@
 	 ((not (or (= p home) (= p *default-red-start*) (= p *default-green-start*)
 		   (= card *sorry*)))
 	  ;; If get the potential places the current move to take this piece
-	  (setf current-move (use-card card p turn current-pieces op-pieces))
-	  ;; When this isn't empty, add to list of moves
-	  (when current-move (setf moves (append current-move moves)))))))
+	  (setf moves (use-card card p turn current-pieces op-pieces moves))))))
     ;; If there are no valid moves, add the pass
     (if moves moves (cons (list *pass* *pass* card) moves))))
