@@ -15,8 +15,8 @@ moves possible.
 <b> Instructions </b>
 <newline>
 To fire this up, you should open up a new buffer in ACLEMACS within the folder that our project
-is in. Then type (compile-file "sorry.lisp"), (compile-file "minimax.lisp"), (compile-file "eval-func.lisp"),
-and (compile-file "compete.lisp").
+is in. Then type (load "sorry"), (load "minimax"), (load "eval-func"),
+and (load "compete").
 
 Type (setf g (make-sorry!)) to create a new game.
 
