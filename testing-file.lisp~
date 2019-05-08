@@ -1,0 +1,10 @@
+;; Testing depth 4 vs random
+
+(let ((count 0)
+      (g nil))
+  (dotimes (i 100)
+    (setf g (compete-vs-random 4 (make-sorry)))
+    (when (= (aref (get-score g) 0) *num-pieces*)
+      (incf count)))
+  (format t "Red (AI) won ~A out of 100 times~%" count)
+  count)

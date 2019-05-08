@@ -350,7 +350,6 @@
 	 (reds (sorry-pieces-r game))
 	 (greens (sorry-pieces-g game))
 	 (curr-player (if (= turn *red*) reds greens))
-	 (index-piece (position loc-old curr-player))
 	 (affected-player (if (= turn *red*) (sorry-pieces-g game)
 			    (sorry-pieces-r game)))
 	 (affected-piece (position loc-new affected-player)))
@@ -373,11 +372,10 @@
 ;;         PIECE, the location of the current piece
 ;;         TURN, a value representing whose turn it is (red or green)
 ;;         CURR-PIECES, the pieces belonging to the current player
-;;         OP-PIECES, the pieces belonging to the other player
 ;;         MOVES, currently accumulated moves
 ;; OUTPUTS: Move accumulator
 
-(defun use-card (card piece turn curr-pieces op-pieces moves)
+(defun use-card (card piece turn curr-pieces  moves)
   (cond
    ;; When the card is a 10
    ((= card 10)
@@ -599,13 +597,11 @@
 			       (sorry-pieces-r g)))
 	 (home (if (= turn *red*) *default-red-home* *default-green-home*))
 	 (card (sorry-current-card g))
-	 (deck (sorry-deck g))
 	 ;; Makes sure we don't generate repeat moves
 	 ;; from pieces in start
 	 (not-seen-start-piece t)
 	 ;; Initialize moves to be empty
-	 (moves ())
-	 (current-move nil))
+	 (moves ()))
     ;; For all the pieces
     (dotimes (i *num-pieces*)
       (let ((p (aref current-pieces i)))
@@ -645,6 +641,6 @@
 	 ((not (or (= p home) (= p *default-red-start*) (= p *default-green-start*)
 		   (= card *sorry*)))
 	  ;; If get the potential places the current move to take this piece
-	  (setf moves (use-card card p turn current-pieces op-pieces moves))))))
+	  (setf moves (use-card card p turn current-pieces moves))))))
     ;; If there are no valid moves, add the pass
     (if moves moves (cons (list *pass* *pass* card) moves))))
