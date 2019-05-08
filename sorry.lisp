@@ -46,10 +46,12 @@
 (defconstant *sorry* 0)
 
 ;; cards available
-(defconstant *cards* (vector *sorry* 1 5 8 10))
+;;(defconstant *cards* (vector *sorry* 1 5 8 10))
+(defconstant *cards* (vector 5 8 1 *sorry* 10))
 
 ;; starting number of each card, indexes correspond to above
-(defconstant *num-each-card* (vector 2 4 4 4 4))
+;(defconstant *num-each-card* (vector 2 4 4 4 4))
+(defconstant *num-each-card* (vector 4 4 4 2 4))
 
 ;; starting number of total cards
 (defconstant *start-deck-num* 18)

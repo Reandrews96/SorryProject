@@ -55,17 +55,17 @@
 	(apply #'do-move! g nil move)))))
   g)
 
-(defconstant *default-depth* 6)
+(defconstant *default-depth* 4)
 
 ;; COMPETE-DIFF-EVAL
 ;; -----------------------------
-;; INPUTS: G, a SORRY struct
-;;         EVAL-RED the eval function used by red player
+;; INPUTS: EVAL-RED the eval function used by red player
 ;;         EVAL-GREEN, the eval function used by green player
+;;         G, a SORRY struct
 ;;         
 ;; OUTPUTS: the end game after competing
 
-(defun compete-diff-eval (g eval-red eval-green)
+(defun compete-diff-eval (eval-red eval-green g)
   (while (not (game-over g))
     (cond
      ((eq (sorry-whose-turn? g) *red*)
