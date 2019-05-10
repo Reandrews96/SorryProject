@@ -34,26 +34,26 @@
 ;;   a depth of *CUTOFF-DEPTH*.
 
 (defun compute-move (g cutoff-depth eval-func)
-    (cond
-     ;; Case 1:  Game over...
-     ((game-over g)
-      (format t "Game is over!  Sorry dude!~%")
-      nil)
-     ;; Case 2:  Game still on, compute best move...
-     (t
-      (when (null (sorry-current-card g))
-	(draw-card g))
-      ;; Call COMPUTE-MAX with init alpha/beta values
-      (let* ((statty (make-stats))
-	     (best-move (compute-max g 0 *neg-inf* *pos-inf* statty cutoff-depth eval-func)))
-	;; Report number of moves considered...
-	(format t "NUM-MOVES-DONE: ~A, PRUNED-MOVES: ~A~%" 
-		(stats-num-moves-done statty) 
-		(- (stats-num-potential-moves statty)
-		   (stats-num-moves-done statty)))
-	(format t "BEST MOVE: ~A~%" best-move)
-	(format t "CARD WAS ~A ~%" (sorry-current-card g))
-	best-move))))
+  (cond
+   ;; Case 1:  Game over...
+   ((game-over g)
+    (format t "Game is over!  Sorry dude!~%")
+    nil)
+   ;; Case 2:  Game still on, compute best move...
+   (t
+    (when (null (sorry-current-card g))
+      (draw-card g))
+    ;; Call COMPUTE-MAX with init alpha/beta values
+    (let* ((statty (make-stats))
+	   (best-move (compute-max g 0 *neg-inf* *pos-inf* statty cutoff-depth eval-func)))
+      ;; Report number of moves considered...
+      (format t "NUM-MOVES-DONE: ~A, PRUNED-MOVES: ~A~%" 
+	      (stats-num-moves-done statty) 
+	      (- (stats-num-potential-moves statty)
+		 (stats-num-moves-done statty)))
+      (format t "BEST MOVE: ~A~%" best-move)
+      (format t "CARD WAS ~A ~%" (sorry-current-card g))
+      best-move))))
   
   
 ;;  COMPUTE-MAX / COMPUTE-MIN
@@ -69,7 +69,7 @@
 ;;  SIDE EFFECT:  Modifies contents of STATTY
 
 (defun compute-max (game curr-depth alpha beta statty cutoff-depth eval-func)
-  (let ((best-move-so-far nil))
+  (let ((best-move-so-far nil))  
     (cond
      ;; Base Case 0:  Game over
      ((game-over game)
@@ -86,6 +86,7 @@
 	;; When we only have one move and we are at depth
 	;; zero, just return this move
 	(when (and (= 1 (length moves)) (zerop curr-depth))
+	  (format t "ROOT NODE: ONLY ONE MOVE SO NO NEED TO EXPLORE ~%")
 	  (return-from compute-max (first moves)))
 	(dolist (mv moves)
 	  (incf (stats-num-moves-done statty))
@@ -128,31 +129,31 @@
 
 (defun compute-min (g curr-depth alpha beta statty cutoff-depth eval-func)
   (cond
-     ;; Base Case 0: Game over... and score computed
-     ((game-over g)
-      ;; just return that value: either a WIN or a DRAW
-      (- *win-value* curr-depth))
-     ;; Base Case 1:  Game not over, but we're at the cutoff depth
-     ((>= curr-depth cutoff-depth)
-      ;; Let static eval func do its thing: assumes game not over
-      (funcall eval-func g))
-     ;; Otherwise, we need to use recursion!
-     (t
-      (let* ((moves (legal-card-moves g)))
-	(incf (stats-num-potential-moves statty) (length moves))
-	(dolist (mv moves)
-	  (incf (stats-num-moves-done statty))
-	  (apply #'do-move! g nil mv)
-	  (let ((child-val (compute-chance g (+ 1 curr-depth) alpha beta statty cutoff-depth 1
-					   eval-func)))
-	    (undo-move! g)
-	    (when (< child-val beta)
-	      (setf beta child-val)
-	      (when (<= beta alpha)
-		(return-from compute-min beta)))))
-	;; return beta
-	;;  NOTE:  Depth can't be zero for a MIN node
-	beta))))
+   ;; Base Case 0: Game over... and score computed
+   ((game-over g)
+    ;; just return that value: either a WIN or a DRAW
+    (- *win-value* curr-depth))
+   ;; Base Case 1:  Game not over, but we're at the cutoff depth
+   ((>= curr-depth cutoff-depth)
+    ;; Let static eval func do its thing: assumes game not over
+    (funcall eval-func g))
+   ;; Otherwise, we need to use recursion!
+   (t
+    (let* ((moves (legal-card-moves g)))
+      (incf (stats-num-potential-moves statty) (length moves))
+      (dolist (mv moves)
+	(incf (stats-num-moves-done statty))
+	(apply #'do-move! g nil mv)
+	(let ((child-val (compute-chance g (+ 1 curr-depth) alpha beta statty
+					 cutoff-depth 1 eval-func)))
+	  (undo-move! g)
+	  (when (< child-val beta)
+	    (setf beta child-val)
+	    (when (<= beta alpha)
+	      (return-from compute-min beta)))))
+      ;; return beta
+      ;;  NOTE:  Depth can't be zero for a MIN node
+      beta))))
 
 ;; COMPUTE-CHANCE
 ;; ------------------------

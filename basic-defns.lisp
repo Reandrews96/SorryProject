@@ -13,12 +13,13 @@
   (list "basic-defns"
 	"sorry"
 	"eval-func"
-    "minimax"
-    "compete"))
+	"minimax"
+	"compete"
+	"testing-file"))
 
 ;;  MAKER
 ;; ------------------------------------
-;;  Compiles and loads all files for the Othello/MCTS implementation
+;;  Compiles and loads all files for the sorry implementation
 
 (defun maker
     ()

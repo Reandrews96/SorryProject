@@ -46,11 +46,9 @@
 (defconstant *sorry* 0)
 
 ;; cards available
-;;(defconstant *cards* (vector *sorry* 1 5 8 10))
 (defconstant *cards* (vector 5 8 1 *sorry* 10))
 
 ;; starting number of each card, indexes correspond to above
-;(defconstant *num-each-card* (vector 2 4 4 4 4))
 (defconstant *num-each-card* (vector 4 4 4 2 4))
 
 ;; starting number of total cards
@@ -381,10 +379,10 @@
   (cond
    ;; When the card is a 10
    ((= card 10)
-    ;; See if you can either move back 1, and if so, update moves
-    (setf moves (check-move-open -1 piece turn curr-pieces moves card))
-    ;; Or if you can move forward 10, do so
-    (setf moves (check-move-open card piece turn curr-pieces moves card)))
+    ;; See if 10 spots ahead is available, and if so, update moves
+    (setf moves (check-move-open 10 piece turn curr-pieces moves card))
+    ;; See if you can either move back -1, and if so, update moves
+    (setf moves (check-move-open -1 piece turn curr-pieces moves card)))
    ;; Otherwise
    (t
     ;; Just  get new position and add this new move if available
@@ -438,11 +436,13 @@
       ;; Move to green start
       *first-board-green*)
      ;; If we have passed red's home
-     ((and (> new-val *default-red-home*) (< new-val 0))
+     ((and (> new-val *default-red-home*) (< new-val 0) (> steps 0))
       ;; Just lock red in the home spot
       *default-red-home*)
-     ;; If we have passed green's home
-     ((and (> new-val *default-green-home*) (< new-val (+ *default-green-home* 50)))
+     ;; If we have passed green's home (use +50 because clear boundary between
+     ;; red's home and green's home)
+     ((and (> new-val *default-green-home*) (< new-val (+ *default-green-home* 50))
+	   (> steps 0))
       ;; Just lock green in the home spot
       *default-green-home*)
      ;; When we reach the top right corner, rotate back to 1

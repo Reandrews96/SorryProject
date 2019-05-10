@@ -14,30 +14,44 @@
      ((= turn *red*)
       ;; Get the number already at home and the number of its pieces
       ;; And its oponents pieces on the board
-      (let ((home (aref (get-score g) 0))
-	    (on-board (- *num-pieces* (count *default-red-start* reds)))
-	    (op-on-board (- *num-pieces* 
-			    (count *default-green-start* greens)))
-	    (my-home-close (calc-closeness-to-home reds *red*))
-	    (my-op-close (calc-closeness-to-home greens *green*)))
-	;; Set amount to be amount constant*home + additional points for being
-	;; on the board and minus points for oponent
-	(setf amount (+ amount (* 100 home) (* 20 on-board) (* -10 op-on-board)
+      (let* ((score (get-score g))
+	     (home (aref score 0))
+
+	     (op-home (aref score 1))
+	     (on-board (- *num-pieces* (count *default-red-start* reds)
+			  (count *default-red-home* reds)))
+	     (op-on-board (- *num-pieces* 
+			     (count *default-green-start* greens)
+			     (count *default-green-home* greens)))
+	     (my-home-close (calc-closeness-to-home reds *red*))
+	     (my-op-close (calc-closeness-to-home greens *green*)))
+	;; Set amount to be amount + home + additional points for being
+	;; on the board + points for having made progress on board
+	;; and minus points for opponent at home and on board and having made
+	;; progress on the board
+	(setf amount (+ amount (* 400 home) (* -100 op-home) (* 50 on-board) 
+			(* -20 op-on-board)
 			(* 30 my-home-close) (* -15 my-op-close)))))
      ;; When its green's turn
      ((= turn *green*)
       ;; Get the number already at home and the number of its pieces
       ;; and its oponents pieces on the board
-      (let ((home (aref (get-score g) 1))
-	    (on-board (- *num-pieces* (count *default-green-start* greens)))
-	    (op-on-board (- *num-pieces* 
-			    (count *default-red-start* reds)))
-	    (my-home-close (calc-closeness-to-home greens *green*))
-	    (my-op-close (calc-closeness-to-home reds *red*)))
-	;; Set amount to be amount constant*home + additional points for being
-	;; on the board and minus points for oponent and points for
-	;; locations of pieces on board
-	(setf amount (+ amount (* 100 home) (* 20 on-board) (* -10 op-on-board)
+      (let* ((score (get-score g))
+	     (home (aref score 1))
+	     (op-home (aref score 0))
+	     (on-board (- *num-pieces* (count *default-green-start* greens)
+			  (count *default-green-home* greens)))
+	     (op-on-board (- *num-pieces* 
+			     (count *default-red-start* reds)
+			     (count *default-red-home* reds)))
+	     (my-home-close (calc-closeness-to-home greens *green*))
+	     (my-op-close (calc-closeness-to-home reds *red*)))
+        ;; Set amount to be amount + home + additional points for being
+	;; on the board + points for having made progress on board
+	;; and minus points for opponent at home and on board and having made
+	;; progress on the board
+	(setf amount (+ amount (* 100 home) (* -100 op-home) (* 20 on-board) 
+			(* -10 op-on-board)
 			(* 30 my-home-close) (* -15 my-op-close))))))
     amount))
 
@@ -45,6 +59,7 @@
 ;; MAKE-EVAL-FUNK
 ;; ---------------------------------------------------------------------------
 ;; INPUTS: HOME-PT, how much to value pieces at our home
+;;         OP-HOME-PT, how much to penalize for opponents being at home
 ;;         ON-BOARD-PT, how much to value having pieces on the board
 ;;         OP-ON-BOARD-PT, how much to penalize for oponents having pieces on the
 ;;          the board
@@ -52,7 +67,7 @@
 ;;         MY-OP-CLOSE-PT, how much to subtract for oponents having pieces advancing
 ;;          on the board
 
-(defun make-eval-funk (home-pt on-board-pt op-on-board-pt my-home-close-pt my-op-close-pt)
+(defun make-eval-funk (home-pt op-home-pt on-board-pt op-on-board-pt my-home-close-pt my-op-close-pt)
   ;; Return an evaluation function that weights each component of the game based on
   ;; the inputs
   #'(lambda (g)
@@ -65,31 +80,41 @@
 	 ((= turn *red*)
 	  ;; Get the number already at home and the number of its pieces
 	  ;; And its oponents pieces on the board
-	  (let ((home (aref (get-score g) 0))
-		(on-board (- *num-pieces* (count *default-red-start* reds)))
-		(op-on-board (- *num-pieces* 
-				(count *default-green-start* greens)))
-		(my-home-close (calc-closeness-to-home reds *red*))
-		(my-op-close (calc-closeness-to-home greens *green*)))
+	  (let* ((score (get-score g))
+		 (home (aref score 0))
+		 (op-home (aref score 1))
+		 (on-board (- *num-pieces* (count *default-red-start* reds)
+			      (count *default-red-home* reds)))
+		 (op-on-board (- *num-pieces* 
+				 (count *default-green-start* greens)
+				 (count *default-green-home* greens)))
+		 (my-home-close (calc-closeness-to-home reds *red*))
+		 (my-op-close (calc-closeness-to-home greens *green*)))
 	    ;; Set amount to be amount constant*home + additional points for being
 	    ;; on the board and minus points for oponent
-	    (setf amount (+ amount (* home-pt home) (* on-board-pt on-board) 
+	    (setf amount (+ amount (* home-pt home) (* op-home-pt op-home)
+			    (* on-board-pt on-board) 
 			    (* op-on-board-pt op-on-board)
 			    (* my-home-close-pt my-home-close) (* my-op-close-pt my-op-close)))))
 	 ;; When its green's turn
 	 ((= turn *green*)
 	  ;; Get the number already at home and the number of its pieces
 	  ;; and its oponents pieces on the board	  
-	  (let ((home (aref (get-score g) 1))
-		(on-board (- *num-pieces* (count *default-green-start* greens)))
-		(op-on-board (- *num-pieces* 
-				(count *default-red-start* reds)))
-		(my-home-close (calc-closeness-to-home greens *green*))
-		(my-op-close (calc-closeness-to-home reds *red*)))
+	  (let* ((score (get-score g))
+		 (home (aref score 1))
+		 (op-home (aref score 0))
+		 (on-board (- *num-pieces* (count *default-green-start* greens)
+			      (count *default-green-home* greens)))
+		 (op-on-board (- *num-pieces* 
+				 (count *default-red-start* reds)
+				 (count *default-red-home* reds)))
+		 (my-home-close (calc-closeness-to-home greens *green*))
+		 (my-op-close (calc-closeness-to-home reds *red*)))
 	    ;; Set amount to be amount constant*home + additional points for being
 	    ;; on the board and minus points for oponent and points for
 	    ;; locations of pieces on board
-	    (setf amount (+ amount (* home-pt home) (* on-board-pt on-board) 
+	    (setf amount (+ amount (* home-pt home) (* op-home-pt op-home)
+			    (* on-board-pt on-board) 
 			    (* op-on-board-pt op-on-board)
 			    (* my-home-close-pt my-home-close) (* my-op-close-pt my-op-close))))))
 	amount)))
@@ -130,7 +155,7 @@
 	    ;; Add 4
 	    (incf sum 4))
 	   ;; In the safe zone
-	   ((>= *default-red-home* piece *start-red-safe*)
+	   ((> *default-red-home* piece *start-red-safe*)
 	    ;; Add additional because can't be touched here
 	    (incf sum 10))))
 	 (t
@@ -144,6 +169,23 @@
 	    (incf sum 3))
 	   ((>= 28 piece 20)
 	    (incf sum 4))
-	   ((>= *default-green-home* piece *start-green-safe*)
+	   ((> *default-green-home* piece *start-green-safe*)
 	    (incf sum 10)))))))
     sum))
+
+
+;; EVAL-FUNCTIONS
+;; -----------------------------------------------------------
+
+;; Offensive strategy: highly value preventing your opponent
+;; from getting their pieces on the board, getting them around the board
+;; and getting them into home even more than making your own progress
+(defparameter offensive (make-eval-funk 400 -300 50 -40 30 -40))
+
+;; Defensive strategy: highly value keeping your pieces on the board,
+;; and getting them into home
+(defparameter defensive (make-eval-funk 500 -100 100 -20 30 -15))
+
+;; Running strategy: highly value getting pieces close to the board and
+;; getting them into home above all else
+(defparameter runner (make-eval-funk 500 -100 50 -20 250 -15))

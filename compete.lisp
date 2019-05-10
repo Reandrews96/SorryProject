@@ -78,6 +78,3 @@
       ;; compute and apply the best move using green's eval
       (apply #'do-move! g nil (compute-move g *default-depth* eval-green)))))
   g)
-
-(defparameter offensive (make-eval-funk 100 20 -50 30 -40))
-(defparameter defensive (make-eval-funk 150 40 -10 50 -15))
