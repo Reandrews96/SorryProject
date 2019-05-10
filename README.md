@@ -15,8 +15,7 @@ moves possible.
 <b> Instructions </b>
 <newline>
 To fire this up, you should open up a new buffer in ACLEMACS within the folder that our project
-is in. Then type (load "sorry"), (load "minimax"), (load "eval-func"),
-and (load "compete").
+is in. Then type (load "basic-defns"), and run (maker) which will allow you to compile and load all of the relevant files for our implementation of sorry.
 
 Type (setf g (make-sorry)) to create a new game.
 
