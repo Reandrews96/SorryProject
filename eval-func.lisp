@@ -177,6 +177,8 @@
 ;; EVAL-FUNCTIONS
 ;; -----------------------------------------------------------
 
+(defparameter both-non-random (make-eval-funk 700 -700 50 -20 30 -15))
+
 ;; Offensive strategy: highly value preventing your opponent
 ;; from getting their pieces on the board, getting them around the board
 ;; and getting them into home even more than making your own progress

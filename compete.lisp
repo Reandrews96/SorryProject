@@ -14,12 +14,12 @@
      ((eq (sorry-whose-turn? g) *red*)
       (format t "Red ~%")
       ;; compute and apply the best move using red's depth
-      (apply #'do-move! g nil (compute-move g red-depth #'default-eval-func)))
+      (apply #'do-move! g nil (compute-move g red-depth both-non-random)))
      ;; On green's turn
      (t
       (format t "Green ~%")
       ;; compute and apply the best move using green's depth
-      (apply #'do-move! g nil (compute-move g green-depth #'default-eval-func)))))
+      (apply #'do-move! g nil (compute-move g green-depth both-non-random)))))
   g)
 
 
