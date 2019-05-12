@@ -16,7 +16,7 @@ moves possible.
 <newline>
 <newline>
 To fire this up, you should open up a new buffer in ACLEMACS within the folder that our project
-is in. To do this, type **aclemacs** into the terminal. Then type **fi:common-lisp** to open up lisp in emacs.
+  is in. To do this, type <b>aclemacs</b> into the terminal. Then type <b>fi:common-lisp</b> to open up lisp in emacs.
 
 In order to run our specific project, type **(load "basic-defns")**, and run **(maker)** which will allow you to compile and load all of the relevant files for our implementation of sorry.
 
