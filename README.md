@@ -38,6 +38,10 @@ Type **(suggest-best-move g depth &optional eval-choice)** with a depth value (c
 
 Type **(do-best-move g depth &optional eval-choice)** in order to just do the best move that would have been suggested in the same way as using suggest-best-move.
 
+<h4>Play Against the AI</h4>
+
+You can select your own moves manually, but for the other player, you will always have them use <b>(do-best-move g depth &optional eval-choice)</b> as shown above.
+
 <h2> Competing at multiple depths or with multiple evaluation functions </h2>
 
 For playing with another player, type **(compete red-depth green-depth g)** in which <i> red-depth </i> is the depth at which
