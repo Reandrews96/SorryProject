@@ -32,7 +32,7 @@ Type **(pass g)** to pass if you have no available moves.
 
 **Important note**: When you specify an index to apply a card to, if you select a piece that is at the start, the piece at start with the lowest number will be selected (none of these are distinguishable anyway).
 
-<h3> Get some help playing your a move </h3>
+<h3> Get some help playing your move </h3>
 
 Type **(suggest-best-move g depth &optional eval-choice)** with a depth value (can do any depth value 8 or below, but 6 and 8 can be a little slow) and an optional numeric value for your choice of evaluation function. If no value is specified, the default is used. 1 indicates the offensive strategy, 2 the defensive, and 3 the runner. This will print out the best move and how to use it above the current game.
 
