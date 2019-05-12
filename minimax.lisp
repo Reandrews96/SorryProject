@@ -172,16 +172,25 @@
 (defun compute-chance 
     (g curr-depth alpha beta statty cutoff-depth max? eval-func)
   (let ((total-sum 0))
+    ;; For each card that we have
     (dotimes (i (length *cards*))
+	;; calculate the probability of choosing that card
       (let* ((child-val nil)
 	     (card (svref *cards* i))
 	     (prob (/ (svref (sorry-deck g) i) (sorry-num-cards g))))
+	 ;; and when the probability is not 0
 	(when (not (= prob 0))
+	  ;; set the current card to this card
 	  (setf (sorry-current-card g) card)
+	  ;; and set the child value to either the max or min depending on which one
+	  ;; needs to be called next
 	  (setf child-val 
 	    (if (= max? 1)
 		(compute-max g curr-depth alpha beta statty cutoff-depth eval-func) 
 	      (compute-min g curr-depth alpha beta statty cutoff-depth eval-func)))
+	  ;; then we increase the total sum of the node by the value times 
+          ;; the probability
 	  (incf total-sum (* prob child-val)))))
+    ;; return the total sum
     total-sum))
 	

@@ -225,9 +225,12 @@
   (let ((list ())
 	(start (if (= turn *red*) *default-red-start*
 		*default-green-start*)))
+    ;; for each piece
     (dotimes (i *num-pieces*)
       (let ((p (aref pieces i)))
+	    ;; when piece is at start
 	    (when (= p start)
+	      ;; add index to list
 	      (push i list))))
     list))
 
