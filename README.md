@@ -34,9 +34,9 @@ Type **(pass g)** to pass if you have no available moves.
 
 <h3> Get some help playing your move </h3>
 
-Type **(suggest-best-move g depth &optional eval-choice)** with a depth value (can do any depth value 8 or below, but 6 and 8 can be a little slow) and an optional numeric value for your choice of evaluation function. If no value is specified, the default is used. 1 indicates the offensive strategy, 2 the defensive, and 3 the runner. This will print out the best move and how to use it above the current game.
+Type **(suggest-best-move g depth &optional eval-choice)** with a depth value (can do any depth value 8 or below, but 6 and 8 can be a little slow) and an optional numeric value for your choice of evaluation function. If no value is specified, the default is used. 1 indicates the offensive strategy, 2 the defensive, and 3 the runner. This will print out the best move and how to use it above the current game using the play-card function.
 
-Type **(do-best-move g depth &optional eval-choice)** in order to do the best move that would have been suggested in the same way as using suggest-best-move.
+Type **(do-best-move g depth &optional eval-choice)** in order to just do the best move that would have been suggested in the same way as using suggest-best-move.
 
 <h2> Competing at multiple depths or with multiple evaluation functions </h2>
 
