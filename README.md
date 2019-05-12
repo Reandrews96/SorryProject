@@ -16,7 +16,7 @@ moves possible.
 <newline>
 <newline>
 To fire this up, you should open up a new buffer in ACLEMACS within the folder that our project
-  is in. To do this, type <b>aclemacs</b> into the terminal. Then type <b>fi:common-lisp</b> to open up lisp in emacs.
+  is in. To do this, type <b>aclemacs</b> into the terminal. Then <b>ESC + X</b>, then type <b>fi:common-lisp</b> and <b>ENTER</b> seven times to open up lisp in emacs.
 
 In order to run our specific project, type **(load "basic-defns")**, and run **(maker)** which will allow you to compile and load all of the relevant files for our implementation of sorry.
 
@@ -37,6 +37,10 @@ Type **(pass g)** to pass if you have no available moves.
 Type **(suggest-best-move g depth &optional eval-choice)** with a depth value (can do any depth value 8 or below, but 6 and 8 can be a little slow) and an optional numeric value for your choice of evaluation function. If no value is specified, the default is used. 1 indicates the offensive strategy, 2 the defensive, and 3 the runner. This will print out the best move and how to use it above the current game using the play-card function.
 
 Type **(do-best-move g depth &optional eval-choice)** in order to just do the best move that would have been suggested in the same way as using suggest-best-move.
+
+<h2>Play Against the AI</h2>
+
+You can select your own moves manually, but for the other player, you will always have them use <b>(do-best-move g depth &optional eval-choice)</b> as shown above.
 
 <h2> Competing at multiple depths or with multiple evaluation functions </h2>
 
