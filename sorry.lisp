@@ -375,6 +375,10 @@
 			    (sorry-pieces-r game)))
 	 (affected-piece (position loc-new affected-player)))
     (cond
+     ;; When there isn't a piece at the old spot
+     ((null (position loc-old curr-player))
+      ;; not legal move
+      nil)
      ;; If we tried to move a piece with a card that cannot be used
      ;; not legal move
      ((null loc-new) nil)
