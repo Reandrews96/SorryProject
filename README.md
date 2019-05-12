@@ -48,4 +48,4 @@ If you want to play against a random player, use **(compete-vs-random depth g)**
 you want to conclude the search and <i>g</i> is your Sorry! game. 
 
 This should print out the <b> Root Node Value </b>, <b>Number of Moves done</b>, <b> Number of Nodes Pruned </b>, 
-<b> Best Move</b>, and <b>Card Choosen</b>.
+<b> Best Move</b>, and <b>Card Chosen</b>.
