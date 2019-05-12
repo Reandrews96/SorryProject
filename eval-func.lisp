@@ -66,6 +66,7 @@
 ;;         MY-HOME-CLOSE-PT, how much to value advancing pieces on the board
 ;;         MY-OP-CLOSE-PT, how much to subtract for oponents having pieces advancing
 ;;          on the board
+;; OUTPUT: a function that can be used an evaluation function for sorry
 
 (defun make-eval-funk (home-pt op-home-pt on-board-pt op-on-board-pt my-home-close-pt my-op-close-pt)
   ;; Return an evaluation function that weights each component of the game based on
