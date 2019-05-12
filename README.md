@@ -16,35 +16,35 @@ moves possible.
 <newline>
 <newline>
 To fire this up, you should open up a new buffer in ACLEMACS within the folder that our project
-is in. To do this, type "aclemacs" into the terminal. Then type "fi:common-lisp" to open up lisp in emacs.
+is in. To do this, type **aclemacs** into the terminal. Then type **fi:common-lisp** to open up lisp in emacs.
 
-In order to run our specific project, type (load "basic-defns"), and run (maker) which will allow you to compile and load all of the relevant files for our implementation of sorry.
+In order to run our specific project, type **(load "basic-defns")**, and run **(maker)** which will allow you to compile and load all of the relevant files for our implementation of sorry.
 
-Type (setf g (make-sorry)) to create a new game.
+Type **(setf g (make-sorry))** to create a new game.
 
 <h2> To play manually against yourself </h2>
 
-Type (draw-card g) to draw a card to start your turn.
-Type (play-card g index &optional secondary) to play your card on a particular piece (specify the piece using index). 
+Type **(draw-card g)** to draw a card to start your turn.
+Type **(play-card g index &optional secondary)** to play your card on a particular piece (specify the piece using index). 
 When the card is the Sorry, the index is used to specify which piece belonging to the other player that you want to send to start.
 You can use the optional index to specify the secondary use of the card if you have a 10 and you want to use it as a -1. To do this, just type -1 in the parameter spot for secondary.
-Type (pass g) to pass if you have no available moves.
+Type **(pass g)** to pass if you have no available moves.
 
 **Important note**: When you specify an index to apply a card to, if you select a piece that is at the start, the piece at start with the lowest number will be selected (none of these are distinguishable anyway).
 
 <h3> Get some help playing your a move </h3>
 
-Type (suggest-best-move g depth &optional eval-choice) with a depth value (can do any depth value 8 or below, but 6 and 8 can be a little slow) and an optional numeric value for your choice of evaluation function. If no value is specified, the default is used. 1 indicates the offensive strategy, 2 the defensive, and 3 the runner. This will print out the best move and how to use it above the current game.
+Type **(suggest-best-move g depth &optional eval-choice)** with a depth value (can do any depth value 8 or below, but 6 and 8 can be a little slow) and an optional numeric value for your choice of evaluation function. If no value is specified, the default is used. 1 indicates the offensive strategy, 2 the defensive, and 3 the runner. This will print out the best move and how to use it above the current game.
 
-Type (do-best-move g depth &optional eval-choice) in order to do the best move that would have been suggested in the same way as using suggest-best-move.
+Type **(do-best-move g depth &optional eval-choice)** in order to do the best move that would have been suggested in the same way as using suggest-best-move.
 
 <h2> Competing at multiple depths or with multiple evaluation functions </h2>
 
-For playing with another player, type (compete red-depth green-depth g) in which <i> red-depth </i> is the depth at which
+For playing with another player, type **(compete red-depth green-depth g)** in which <i> red-depth </i> is the depth at which
 you want the search to go for the red player, <i>green-depth</i> is the same but for the green player, and <i>g</i> is your 
 Sorry! game.
 
-If you want to play against a random player, use (compete-vs-random depth g) in which <i>depth</i> is the depth at which
+If you want to play against a random player, use **(compete-vs-random depth g)** in which <i>depth</i> is the depth at which
 you want to conclude the search and <i>g</i> is your Sorry! game. 
 
 This should print out the <b> Root Node Value </b>, <b>Number of Moves done</b>, <b> Number of Nodes Pruned </b>, 
