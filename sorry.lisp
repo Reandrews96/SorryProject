@@ -678,19 +678,28 @@
 ;; SUGGEST-BEST-MOVE
 ;; -----------------------------------------------------------------
 ;; INPUTS: G, a current sorry game
-;;         depth, a depth value to do the search to
+;;         DEPTH, a depth value to do the search to
+;;         EVAL-CHOICE, an optional input to specify the evaluation
+;;          function to be used. 1 indicates offensive, 2
+;;          indicates defensive, 3 indicates runner
 ;; OUTPUTS: G, the game 
 ;; SIDE-EFFECT: Prints best move in terms the user can understand
 
-(defun suggest-best-move (g depth)
+(defun suggest-best-move (g depth &optional eval-choice)
   ;; Get information related to the current game
   ;; and compute the best move using the given depth
   (let* ((turn (sorry-whose-turn? g))
 	 (curr-pieces (if (= turn *red*)
 			  (sorry-pieces-r g) (sorry-pieces-g g)))
 	 (op-pieces (if (= turn *red*)
-			  (sorry-pieces-g g) (sorry-pieces-r g)))
-	 (move (compute-move g depth #'default-eval-func))
+			(sorry-pieces-g g) (sorry-pieces-r g)))
+	 ;; Select eval funk based on input
+	 (eval-funky (cond
+		      ((and eval-choice (= 1 eval-choice)) offensive)
+		      ((and eval-choice (= 2 eval-choice)) defensive)
+		      ((and eval-choice (= 3 eval-choice)) runner)
+		      (t #'default-eval-func)))
+	 (move (compute-move g depth eval-funky))
 	 ;; Get the information related to the best move
 	 (piece (position (first move) curr-pieces))
 	 ;; in case need affected piece for opponent
@@ -729,18 +738,27 @@
 ;; DO-BEST-MOVE
 ;; -----------------------------------------------------------------
 ;; INPUTS: G, a current sorry game
-;;         depth, a depth value to do the search to
+;;         DEPTH, a depth value to do the search to
+;;         EVAL-CHOICE, an optional input to specify the evaluation
+;;          function to be used. 1 indicates offensive, 2
+;;          indicates defensive, 3 indicates runner
 ;; OUTPUTS: G, the game resulting from doing best move
 
-(defun do-best-move (g depth)
+(defun do-best-move (g depth &optional eval-choice)
   ;; Get information related to the current game
   ;; and compute the best move using the given depth
   (let* ((turn (sorry-whose-turn? g))
 	 (curr-pieces (if (= turn *red*)
 			  (sorry-pieces-r g) (sorry-pieces-g g)))
 	 (op-pieces (if (= turn *red*)
-			  (sorry-pieces-g g) (sorry-pieces-r g)))
-	 (move (compute-move g depth #'default-eval-func))
+			(sorry-pieces-g g) (sorry-pieces-r g)))
+	 ;; Select the evaluation function based on input
+	 (eval-funky (cond
+		      ((and eval-choice (= 1 eval-choice)) offensive)
+		      ((and eval-choice (= 2 eval-choice)) defensive)
+		      ((and eval-choice (= 3 eval-choice)) runner)
+		      (t #'default-eval-func)))
+	 (move (compute-move g depth eval-funky))
 	 ;; Get the information related to the best move
 	 (piece (position (first move) curr-pieces))
 	 ;; in case need affected piece for opponent
