@@ -116,7 +116,7 @@
 	(turn (sorry-whose-turn? game))
 	(score (get-score game)))
     (declare (ignore depth))
-    (format str "Current game: ~% ~%")
+    (format str "~%Current game: ~% ~%")
     ;; Print out the board. The board starts at 1 in the upper left
     ;; corner and snakes around it get all the way back, ending at
     ;; 37 (each side is length 10)
@@ -204,14 +204,32 @@
     (format str "Red has ~A still at start. Green has ~A still at start. ~%"
 	    (count *default-red-start* red)
 	    (count *default-green-start* green))
+        (format str "Red's pieces at start: ~A Green's pieces at start: ~A. ~%"
+	    (at-start red *red*) (at-start green *green*))
     (format str "It is ~A's turn! ~%"
 	    (if (eq *red* turn) "red" "green"))
     (cond
      ((null card)
       (format str "Draw a card! ~%"))
      (t
-      (format str "Current card is ~A. ~%" card)))))
+      (format str "Current card is ~A. ~%" (if (= card *sorry*) "Sorry!" card))))))
 
+
+;; AT-START
+;; ------------------------------------------------------
+;; INPUT: PIECES, vector of pieces for a given player
+;;        TURN, value indicating whose turn (red or green)
+;; OUTPUT: a list of the pieces in the start for the given player
+
+(defun at-start (pieces turn)
+  (let ((list ())
+	(start (if (= turn *red*) *default-red-start*
+		*default-green-start*)))
+    (dotimes (i *num-pieces*)
+      (let ((p (aref pieces i)))
+	    (when (= p start)
+	      (push i list))))
+    list))
 
 ;;  TOGGLE-TURN!
 ;; -------------------------------------------------------
@@ -360,10 +378,13 @@
      ;; If you try to use the sorry card to move a piece
      ;; not in the start or in a safe zone
      ((and (= card *sorry*) (> loc-old 0)) nil)
-     ;; Cannot move into the same spot as another one of your own
-     ;; pieces or affect a player that is either at the start
+     ;; Cannot affect a player that is either at the start
      ;; or their safe zone
-     ((or (position loc-new curr-player)(and affected-piece (< loc-new 0))) nil)
+     ((and affected-piece (< loc-new 0)) nil)
+     ((and (position loc-new curr-player) (not (= loc-new *default-red-home*))
+	   (not (= loc-new *default-green-home*)))
+      nil)
+     ;; Otherwise legal move
      (t t))))
 
 ;; USE-CARD
@@ -544,17 +565,19 @@
 ;; -----------------------------------------
 ;; INPUTS: G, a SORRY struct
 ;;         INDEX, the index of the piece you would like to move
-;;         INDEX-OR-CARD, an additional value used to specify
-;;           either the index of the other team's piece you wish
-;;           to affect or the secondary use of the card
+;;         SECONDARY,used to specify
+;;           that you want to use the secondary value of the card,
+;;           only useful for 10. 
 ;; OUTPUTS: the modified game after applying card to this piece
 ;; NOTE: at the start, regardless of what index you use, the next available
 ;; piece will be moved onto the start spot
 
-(defun play-card (g index &optional index-or-card)
+(defun play-card (g index &optional secondary)
   ;; Get details of the current state of the game
   (let* ((card (sorry-current-card g))
 	 (turn (sorry-whose-turn? g))
+	 (start-loc (if (= turn *red*) *default-red-start*
+		      *default-green-start*))
 	 (current-pieces (if (= turn *red*) (sorry-pieces-r g)
 			   (sorry-pieces-g g)))
 	 (op-pieces (if (= turn *red*) (sorry-pieces-g g)
@@ -563,9 +586,13 @@
     (cond
      ;; When the card is a sorry, put piece on the spot
      ;; of the piece of the other team if possible
-     ((and card (= card *sorry*) index-or-card)
-      (do-move! g t piece-loc (aref op-pieces index-or-card) card))
-     ((and card (null index-or-card))
+     ((and card (= card *sorry*) (null secondary))
+      (do-move! g t start-loc (aref op-pieces index) card))
+     ;; When the card is a 10 and the secondary use of a negative 1 is called
+     ;; try this move
+     ((and card secondary (= card 10) (= secondary -1))
+      (do-move! g t piece-loc (move-piece-on-board piece-loc -1 turn) card))
+     ((and card (null secondary))
       ;; Play it
       (do-move! g t piece-loc (move-piece-on-board piece-loc card turn) card))
       (t
@@ -646,3 +673,105 @@
 	  (setf moves (use-card card p turn current-pieces moves))))))
     ;; If there are no valid moves, add the pass
     (if moves moves (cons (list *pass* *pass* card) moves))))
+
+
+;; SUGGEST-BEST-MOVE
+;; -----------------------------------------------------------------
+;; INPUTS: G, a current sorry game
+;;         depth, a depth value to do the search to
+;; OUTPUTS: G, the game 
+;; SIDE-EFFECT: Prints best move in terms the user can understand
+
+(defun suggest-best-move (g depth)
+  ;; Get information related to the current game
+  ;; and compute the best move using the given depth
+  (let* ((turn (sorry-whose-turn? g))
+	 (curr-pieces (if (= turn *red*)
+			  (sorry-pieces-r g) (sorry-pieces-g g)))
+	 (op-pieces (if (= turn *red*)
+			  (sorry-pieces-g g) (sorry-pieces-r g)))
+	 (move (compute-move g depth #'default-eval-func))
+	 ;; Get the information related to the best move
+	 (piece (position (first move) curr-pieces))
+	 ;; in case need affected piece for opponent
+	 (op-piece (position (second move) op-pieces))
+	 (card (third move)))
+    (cond 
+     ;; When the game is over
+     ((game-over g)
+      ;; No move to suggest
+      (format t "~%Can't suggest a move!~%"))
+     ;; When the only move is to pass
+     ((null piece)
+      ;; tell the user to pass
+      (format t "~%No move available! Use (pass g) to pass. ~%~%"))
+     ;; When the card is sorry
+     ((= card *sorry*)
+      ;; Tell the user which piece to attack!
+      (format t 
+	      "~%Play Sorry! on your piece at home onto opponent piece labeled ~A. ~%"
+	      op-piece)
+      (format t "To do this, use (play-card g ~A) ~%~%" op-piece))
+     ;; When the card is a 10 and the secondary use (-1) is used
+     ((and (= card 10) (= (second move) (move-piece-on-board (first move) -1 turn)))
+      ;; make sure to say that it was used this way
+      (format t "~%Play 10 card on piece labeled ~A, but use as -1. ~%" piece)
+      (format t "To do this, use (play-card g ~A -1)~%~%" piece))
+     (t
+      ;; Otherwise tell the user which piece to apply the card too
+      (format t 
+	      "~%Play card ~A on your piece labeled ~A. ~%"
+	      card piece)
+      (format t "To do this, use (play-card g ~A)~%~%" piece)))
+    g))
+
+
+;; DO-BEST-MOVE
+;; -----------------------------------------------------------------
+;; INPUTS: G, a current sorry game
+;;         depth, a depth value to do the search to
+;; OUTPUTS: G, the game resulting from doing best move
+
+(defun do-best-move (g depth)
+  ;; Get information related to the current game
+  ;; and compute the best move using the given depth
+  (let* ((turn (sorry-whose-turn? g))
+	 (curr-pieces (if (= turn *red*)
+			  (sorry-pieces-r g) (sorry-pieces-g g)))
+	 (op-pieces (if (= turn *red*)
+			  (sorry-pieces-g g) (sorry-pieces-r g)))
+	 (move (compute-move g depth #'default-eval-func))
+	 ;; Get the information related to the best move
+	 (piece (position (first move) curr-pieces))
+	 ;; in case need affected piece for opponent
+	 (op-piece (position (second move) op-pieces))
+	 (card (third move)))
+    (cond 
+     ;; When the game is over
+     ((game-over g)
+      ;; don't do any move, return from function
+      (return-from do-best-move))
+     ;; When the only move is to pass
+     ((null piece)
+      ;; tell the user to pass
+      (format t "~%No move available! Used pass. ~%"))
+     ;; When the card is sorry
+     ((= card *sorry*)
+      ;; Tell the user which piece to attack!
+      (format t 
+	      "~%Played Sorry! on your piece at home onto opponent piece labeled ~A. ~%"
+	      op-piece))
+     ;; When the card is a 10 and the secondary use (-1) is used
+     ((and (= card 10) (= (second move) (move-piece-on-board (first move) -1 turn)))
+      ;; make sure to say that it was used this way
+      (format t "~%Played 10 card on piece labeled ~A, but used as -1. ~%" piece))
+     (t
+      ;; Otherwise tell the user which piece to apply the card too
+      (format t 
+	      "~%Played card ~A on your piece labeled ~A. ~%"
+	      card piece)))
+    ;; Just do the best move on the current game as long as game not over
+    (when (not (game-over g))
+      (apply #'do-move! g nil move))
+    ;; return the game
+    g))

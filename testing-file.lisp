@@ -28,18 +28,17 @@
     (format t "~% ~% ~%")
     count))
 
-
 ;; Testing depth 4 vs depth 6
 
 (defun depth-4-vs-6 ()
   (let ((count 0)) 
     (format t "TESTING DEPTH 4 (RED) vs DEPTH 6 (GREEN)  ~%")
-    (dotimes (i 20)
+    (dotimes (i 30)
     (let ((g (make-sorry)))
       (compete 4 6 g)
       (when (= (aref (get-score g) 1) *num-pieces*)
 	(incf count))))
-    (format t "Green (Depth 6) won ~A out of 20 times~%" count)
+    (format t "Green (Depth 6) won ~A out of 30 times~%" count)
     (format t "~% ~% ~%")
     count))
 
@@ -94,5 +93,33 @@
       (when (= (aref (get-score g) 1) *num-pieces*)
 	(incf count))))
     (format t "Green (Defensive) won ~A out of 100 times~%" count)
+    (format t "~% ~% ~%")
+    count))
+
+;; Testing the offesnive vs running strategies
+
+(defun offensive-vs-runner ()
+  (let ((count 0)) 
+    (format t "TESTING OFFENSE (RED) vs RUNNER (GREEN)  ~%")
+    (dotimes (i 100)
+    (let ((g (make-sorry)))
+      (compete-diff-eval offensive runner g)
+      (when (= (aref (get-score g) 1) *num-pieces*)
+	(incf count))))
+    (format t "Green (Runner) won ~A out of 100 times~%" count)
+    (format t "~% ~% ~%")
+    count))
+
+;; Testing the defensive vs running strategies
+
+(defun defensive-vs-runner ()
+  (let ((count 0)) 
+    (format t "TESTING DEFENSE (RED) vs RUNNER (GREEN)  ~%")
+    (dotimes (i 100)
+    (let ((g (make-sorry)))
+      (compete-diff-eval defensive runner g)
+      (when (= (aref (get-score g) 1) *num-pieces*)
+	(incf count))))
+    (format t "Green (Runner) won ~A out of 100 times~%" count)
     (format t "~% ~% ~%")
     count))

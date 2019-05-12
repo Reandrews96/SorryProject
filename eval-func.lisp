@@ -50,9 +50,9 @@
 	;; on the board + points for having made progress on board
 	;; and minus points for opponent at home and on board and having made
 	;; progress on the board
-	(setf amount (+ amount (* 100 home) (* -100 op-home) (* 20 on-board) 
-			(* -10 op-on-board)
-			(* 30 my-home-close) (* -15 my-op-close))))))
+	(setf amount (+ amount (* 700 home) (* -600 op-home) (* 50 on-board) 
+			(* -20 op-on-board)
+			(* 50 my-home-close) (* -50 my-op-close))))))
     amount))
 
 
@@ -177,17 +177,16 @@
 ;; EVAL-FUNCTIONS
 ;; -----------------------------------------------------------
 
-(defparameter both-non-random (make-eval-funk 700 -700 50 -20 30 -15))
 
 ;; Offensive strategy: highly value preventing your opponent
-;; from getting their pieces on the board, getting them around the board
-;; and getting them into home even more than making your own progress
-(defparameter offensive (make-eval-funk 400 -300 50 -40 30 -40))
+;; from getting their pieces on the board, and getting them around the board
+;; even more than making your own progress
+(defparameter offensive (make-eval-funk 700 -600 50 -200 50 -300))
 
 ;; Defensive strategy: highly value keeping your pieces on the board,
 ;; and getting them into home
-(defparameter defensive (make-eval-funk 500 -100 100 -20 30 -15))
+(defparameter defensive (make-eval-funk 2000 -600 500 -20 50 -50))
 
 ;; Running strategy: highly value getting pieces close to the board and
 ;; getting them into home above all else
-(defparameter runner (make-eval-funk 500 -100 50 -20 250 -15))
+(defparameter runner (make-eval-funk 700 -600 50 -20 500 -50))
