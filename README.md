@@ -30,7 +30,7 @@ When the card is the Sorry, the index is used to specify which piece belonging t
 You can use the optional index to specify the secondary use of the card if you have a 10 and you want to use it as a -1. To do this, just type -1 in the parameter spot for secondary.
 Type **(pass g)** to pass if you have no available moves.
 
-**Important note**: When you specify an index to apply a card to, if you select a piece that is at the start, the piece at start with the lowest number will be selected (none of these are distinguishable anyway).
+**Important note**: When you specify an index to apply a card to, if you select a piece that is at the start, the piece at start with the lowest number will be selected (none of these are distinguishable anyway). This is only relevant when applying a 1 to a piece at the start.
 
 <h3> Get some help playing your move </h3>
 
